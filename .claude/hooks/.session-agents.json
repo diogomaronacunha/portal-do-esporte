@@ -1,0 +1,9 @@
+{
+  "startedAt": 1773497698503,
+  "agents": [
+    "AIOS:agents:sm",
+    "AIOS:agents:devops",
+    "AIOS:agents:po",
+    "AIOS:agents:dev"
+  ]
+}

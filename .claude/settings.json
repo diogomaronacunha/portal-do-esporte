@@ -1,0 +1,25 @@
+{
+  "language": "portuguese",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/agent-session-guard.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/large-file-guard.js"
+          }
+        ]
+      }
+    ]
+  }
+}
