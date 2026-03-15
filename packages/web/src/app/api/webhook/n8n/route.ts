@@ -129,6 +129,7 @@ async function handleEvento(supabase: AnySupabaseClient, payload: EventoPayload)
     slug,
     descricao: payload.descricao ?? null,
     data_inicio: payload.data_inicio,
+    data_evento: payload.data_inicio, // coluna legada da tabela original (NOT NULL)
     data_fim: payload.data_fim ?? null,
     hora_inicio: payload.hora_inicio ?? null,
     local_nome: payload.local_nome,

@@ -1,55 +1,19 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import { getNoticiasPublicadas } from '@/lib/db/noticias'
+import { getEventosAprovados } from '@/lib/db/eventos'
+import { formatDate } from '@/lib/utils'
 
-// Dados placeholder — serão substituídos por dados reais do Supabase
-const noticiasFake = [
-  {
-    id: '1',
-    titulo: 'Campeonato Gaúcho de Futebol Amador 2026 tem nova data',
-    resumo: 'A Federação Gaúcha de Futebol anunciou as datas da edição 2026 do campeonato amador estadual.',
-    esporte: 'Futebol',
-    fonte: 'FGF',
-    slug: 'campeonato-gaucho-futebol-amador-2026',
-  },
-  {
-    id: '2',
-    titulo: 'Atletismo gaúcho conquista medalhas no campeonato nacional',
-    resumo: 'Atletas do RS sobem ao pódio em três modalidades durante o Campeonato Brasileiro de Atletismo.',
-    esporte: 'Atletismo',
-    fonte: 'FGA',
-    slug: 'atletismo-gaucho-medalhas-campeonato-nacional',
-  },
-  {
-    id: '3',
-    titulo: 'Vôlei de praia: torneio regional acontece em Tramandaí',
-    resumo: 'Mais de 50 duplas inscritas para o torneio regional de beach vôlei no litoral gaúcho.',
-    esporte: 'Beach Vôlei',
-    fonte: 'FGV',
-    slug: 'torneio-beach-volei-tramandai',
-  },
-]
+export const revalidate = 1800 // 30 minutos
 
-const eventosFake = [
-  {
-    id: '1',
-    titulo: 'Corrida 5K Parque Farroupilha',
-    data: '29/03/2026',
-    local: 'Porto Alegre, RS',
-    esporte: 'Corrida de Rua',
-    gratuito: false,
-  },
-  {
-    id: '2',
-    titulo: 'Torneio de Judô Região Metropolitana',
-    data: '05/04/2026',
-    local: 'Canoas, RS',
-    esporte: 'Judô',
-    gratuito: true,
-  },
-]
+export default async function HomePage() {
+  const [noticias, eventos] = await Promise.all([
+    getNoticiasPublicadas(3).catch(() => []),
+    getEventosAprovados(4).catch(() => []),
+  ])
 
-export default function HomePage() {
   return (
     <>
       <Header />
@@ -90,23 +54,48 @@ export default function HomePage() {
                 Ver todas →
               </Link>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {noticiasFake.map((noticia) => (
-                <article key={noticia.id} className="card hover:shadow-md transition-shadow">
-                  <div className="bg-gray-200 h-40 flex items-center justify-center text-gray-400 text-sm">
-                    Imagem da notícia
-                  </div>
-                  <div className="p-4">
-                    <span className="badge-green mb-2">{noticia.esporte}</span>
-                    <h3 className="font-semibold text-gray-900 mt-2 mb-1 line-clamp-2">
-                      {noticia.titulo}
-                    </h3>
-                    <p className="text-gray-500 text-sm line-clamp-2">{noticia.resumo}</p>
-                    <p className="text-xs text-gray-400 mt-3">Fonte: {noticia.fonte}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
+
+            {noticias.length === 0 ? (
+              <p className="text-gray-400 text-center py-10">Nenhuma notícia publicada ainda.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {noticias.map((noticia) => (
+                  <article key={noticia.id} className="card hover:shadow-md transition-shadow">
+                    {noticia.imagem_url ? (
+                      <div className="relative h-40 overflow-hidden">
+                        <Image
+                          src={noticia.imagem_url}
+                          alt={noticia.titulo}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                        />
+                      </div>
+                    ) : (
+                      <div className="bg-gray-100 h-40 flex items-center justify-center text-gray-300 text-sm">
+                        {noticia.esporte?.nome ?? 'Notícia'}
+                      </div>
+                    )}
+                    <div className="p-4">
+                      {noticia.esporte && (
+                        <span className="badge-green mb-2">{noticia.esporte.nome}</span>
+                      )}
+                      <h3 className="font-semibold text-gray-900 mt-2 mb-1 line-clamp-2">
+                        <Link href={`/noticias/${noticia.slug}`} className="hover:text-primary-600">
+                          {noticia.titulo}
+                        </Link>
+                      </h3>
+                      {noticia.resumo && (
+                        <p className="text-gray-500 text-sm line-clamp-2">{noticia.resumo}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-3">
+                        {noticia.fonte_nome} · {formatDate(noticia.publicado_at ?? noticia.created_at)}
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -119,36 +108,50 @@ export default function HomePage() {
                 Ver calendário →
               </Link>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {eventosFake.map((evento) => (
-                <div key={evento.id} className="card p-4 flex gap-4">
-                  <div className="bg-primary-600 text-white rounded-lg p-3 text-center min-w-[60px]">
-                    <div className="text-xs font-medium">{evento.data.split('/')[1]}/{evento.data.split('/')[2]}</div>
-                    <div className="text-2xl font-bold">{evento.data.split('/')[0]}</div>
-                  </div>
-                  <div>
-                    <span className="badge-gray mb-1">{evento.esporte}</span>
-                    <h3 className="font-semibold text-gray-900">{evento.titulo}</h3>
-                    <p className="text-sm text-gray-500">{evento.local}</p>
-                    {evento.gratuito && (
-                      <span className="badge-green mt-1">Gratuito</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+
+            {eventos.length === 0 ? (
+              <p className="text-gray-400 text-center py-10">Nenhum evento cadastrado ainda.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {eventos.map((evento) => {
+                  const data = new Date(evento.data_inicio + 'T12:00:00')
+                  return (
+                    <div key={evento.id} className="card p-4 flex gap-4">
+                      <div className="bg-primary-600 text-white rounded-lg p-3 text-center min-w-[60px] flex-shrink-0">
+                        <div className="text-xs font-medium uppercase">
+                          {data.toLocaleDateString('pt-BR', { month: 'short' })}
+                        </div>
+                        <div className="text-2xl font-bold leading-none mt-0.5">
+                          {data.getDate()}
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        {evento.esporte && (
+                          <span className="badge-gray mb-1">{evento.esporte.nome}</span>
+                        )}
+                        <h3 className="font-semibold text-gray-900 truncate">{evento.titulo}</h3>
+                        <p className="text-sm text-gray-500">{evento.local_cidade}, {evento.local_estado}</p>
+                        {evento.gratuito && (
+                          <span className="badge-green mt-1">Gratuito</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </section>
 
         {/* CTA Cadastro */}
-        <section className="py-12 px-4 bg-gray-900 text-white text-center">
+        <section className="py-12 px-4 bg-primary-600 text-white text-center">
           <h2 className="text-2xl font-bold mb-2">Tem um evento esportivo?</h2>
-          <p className="text-gray-400 mb-6">
+          <p className="text-primary-100 mb-6">
             Divulgue gratuitamente no maior portal do esporte amador gaúcho.
           </p>
           <Link
             href="/cadastrar-evento"
-            className="btn-primary inline-block"
+            className="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-3 px-8 rounded-lg transition-colors inline-block"
           >
             Cadastrar Evento
           </Link>

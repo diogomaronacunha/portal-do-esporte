@@ -30,6 +30,7 @@ export async function POST(req: Request) {
     slug,
     descricao: body.descricao as string | null,
     data_inicio: body.data_inicio as string,
+    data_evento: body.data_inicio as string, // coluna legada NOT NULL
     data_fim: body.data_fim as string | null,
     hora_inicio: body.hora_inicio as string | null,
     local_nome: body.local_nome as string,

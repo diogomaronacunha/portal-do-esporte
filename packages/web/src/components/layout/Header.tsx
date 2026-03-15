@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Menu, X, LogOut, User } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -40,8 +41,15 @@ export default function Header() {
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-primary-600 font-bold text-xl">⚽ Portal do Esporte</span>
+        <Link href="/" className="flex items-center">
+          <Image
+            src="http://portaldoesporte.com.br/wp-content/uploads/2022/06/ID-Portal-do-Esporte-300x146.png"
+            alt="Portal do Esporte"
+            width={150}
+            height={73}
+            priority
+            className="h-10 w-auto"
+          />
         </Link>
 
         {/* Nav Desktop */}
