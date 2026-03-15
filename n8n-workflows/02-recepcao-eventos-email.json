@@ -1,0 +1,115 @@
+{
+  "name": "Portal do Esporte — Recepção de Eventos via Email",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [{ "mode": "everyMinute" }]
+        },
+        "mailbox": "INBOX",
+        "options": {
+          "allowUnauthorizedCerts": false,
+          "downloadAttachments": false,
+          "format": "simple"
+        }
+      },
+      "id": "node-imap",
+      "name": "📬 Monitorar Email (IMAP)",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "credentials": {
+        "imap": {
+          "id": "CONFIGURAR_CREDENCIAL_IMAP",
+          "name": "Email Portal do Esporte"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.subject }}",
+              "rightValue": "evento",
+              "operator": { "type": "string", "operation": "contains" }
+            }
+          ]
+        }
+      },
+      "id": "node-filter",
+      "name": "🔎 Filtrar e-mails de evento",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Extrai dados do evento a partir do corpo do e-mail\n//\n// Formato esperado (enviar para o email do portal):\n//\n// Assunto: Evento: Nome do Evento\n//\n// EVENTO: Corrida 5K Parque da Redenção\n// DATA: 29/03/2026\n// LOCAL: Parque da Redenção\n// CIDADE: Porto Alegre\n// ESPORTE: Corrida\n// ORGANIZADOR: Associação RS Running\n// CONTATO: (51) 99999-9999\n// GRATUITO: sim\n// LINK: https://sympla.com.br/...\n// DESCRICAO: Texto livre sobre o evento...\n// ============================================================\n\nconst body = $json.text || ($json.html || '').replace(/<[^>]+>/g, '');\nconst subject = $json.subject || '';\n\nconst extract = (label) => {\n  const m = body.match(new RegExp(`${label}:\\\\s*(.+)`, 'i'));\n  return m ? m[1].trim() : null;\n};\n\nconst parseDate = (str) => {\n  if (!str) return null;\n  const m = str.match(/(\\d{1,2})[\\/\\-](\\d{1,2})[\\/\\-](\\d{4})/);\n  return m ? `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : null;\n};\n\nconst esporteMap = {\n  'futebol': 'futebol', 'futsal': 'futsal',\n  'volei': 'volei', 'vôlei': 'volei',\n  'basquete': 'basquete', 'atletismo': 'atletismo',\n  'corrida': 'corrida-de-rua', 'natacao': 'natacao', 'natação': 'natacao',\n  'judo': 'judo', 'judô': 'judo', 'karate': 'karate', 'karatê': 'karate',\n  'ciclismo': 'ciclismo', 'handebol': 'handebol',\n  'tenis': 'tenis', 'tênis': 'tenis', 'padel': 'padel', 'rugby': 'rugby'\n};\n\nconst esporteRaw = (extract('ESPORTE') || '').toLowerCase();\nconst esporte_slug = Object.entries(esporteMap).find(([k]) => esporteRaw.includes(k))?.[1] || null;\n\nconst data_inicio = parseDate(extract('DATA'));\n\nif (!data_inicio) {\n  console.log('⚠️ Data não encontrada no e-mail:', extract('DATA'));\n  return [];\n}\n\nconst titulo = extract('EVENTO') || subject.replace(/evento[:\\s]*/i, '').trim();\n\nif (!titulo) {\n  console.log('⚠️ Título do evento não encontrado');\n  return [];\n}\n\nreturn [{ json: {\n  titulo,\n  data_inicio,\n  local_nome: extract('LOCAL') || 'A confirmar',\n  local_cidade: extract('CIDADE') || 'Porto Alegre',\n  organizador_nome: extract('ORGANIZADOR') || ($json.from?.split('<')[0].trim()) || 'Não informado',\n  organizador_contato: extract('CONTATO') || $json.from || null,\n  esporte_slug,\n  gratuito: !(extract('GRATUITO') || 'sim').toLowerCase().includes('não'),\n  url_inscricao: extract('LINK') || null,\n  descricao: extract('DESCRICAO') || null\n}}];"
+      },
+      "id": "node-parse",
+      "name": "🔍 Extrair dados do evento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://portaldoesporte.com.br/api/webhook/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "portal-esporte-webhook-2026"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"evento\",\n  \"titulo\": \"{{ $json.titulo }}\",\n  \"descricao\": \"{{ $json.descricao }}\",\n  \"data_inicio\": \"{{ $json.data_inicio }}\",\n  \"local_nome\": \"{{ $json.local_nome }}\",\n  \"local_cidade\": \"{{ $json.local_cidade }}\",\n  \"organizador_nome\": \"{{ $json.organizador_nome }}\",\n  \"organizador_contato\": \"{{ $json.organizador_contato }}\",\n  \"esporte_slug\": \"{{ $json.esporte_slug }}\",\n  \"gratuito\": {{ $json.gratuito }},\n  \"url_inscricao\": \"{{ $json.url_inscricao }}\"\n}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "node-webhook",
+      "name": "📤 Enviar evento ao Portal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst titulo = $('🔍 Extrair dados do evento').item.json.titulo;\n\nif (response.success) {\n  console.log(`✅ Evento cadastrado: ${titulo}`);\n} else {\n  console.log(`❌ Erro: ${titulo} — ${JSON.stringify(response)}`);\n}\n\nreturn $input.all();"
+      },
+      "id": "node-log",
+      "name": "📝 Log do resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "📬 Monitorar Email (IMAP)": {
+      "main": [[{ "node": "🔎 Filtrar e-mails de evento", "type": "main", "index": 0 }]]
+    },
+    "🔎 Filtrar e-mails de evento": {
+      "main": [[{ "node": "🔍 Extrair dados do evento", "type": "main", "index": 0 }]]
+    },
+    "🔍 Extrair dados do evento": {
+      "main": [[{ "node": "📤 Enviar evento ao Portal", "type": "main", "index": 0 }]]
+    },
+    "📤 Enviar evento ao Portal": {
+      "main": [[{ "node": "📝 Log do resultado", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": ["portal-do-esporte"]
+}

@@ -1,0 +1,137 @@
+{
+  "name": "Portal do Esporte — Scraping de Notícias RSS",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "node-schedule",
+      "name": "⏰ Disparar a cada 6h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// FONTES RSS — sites das federações gaúchas\n// Verifique cada URL antes de ativar a fonte\n// ativo: false = não será buscado ainda\n// ============================================================\nconst fontes = [\n  {\n    nome: 'Federação Gaúcha de Futebol',\n    url_rss: 'https://www.fgf.com.br/feed',\n    esporte_slug: 'futebol',\n    ativo: false\n  },\n  {\n    nome: 'Federação Gaúcha de Atletismo',\n    url_rss: 'https://www.fga.com.br/feed',\n    esporte_slug: 'atletismo',\n    ativo: false\n  },\n  {\n    nome: 'Federação Gaúcha de Vôlei',\n    url_rss: 'https://www.fgv.com.br/feed',\n    esporte_slug: 'volei',\n    ativo: false\n  },\n  {\n    nome: 'Federação Gaúcha de Basquetebol',\n    url_rss: 'https://www.fgb.com.br/feed',\n    esporte_slug: 'basquete',\n    ativo: false\n  },\n  // TESTE: Globo Esporte (tem RSS real)\n  {\n    nome: 'GloboEsporte',\n    url_rss: 'https://ge.globo.com/rss/atomfeed.xml',\n    esporte_slug: 'futebol',\n    ativo: true\n  }\n];\n\nreturn fontes\n  .filter(f => f.ativo)\n  .map(f => ({ json: f }));"
+      },
+      "id": "node-fontes",
+      "name": "📋 Lista de Fontes RSS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url_rss }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "node-fetch",
+      "name": "🌐 Buscar RSS Feed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parsear XML do RSS e extrair itens\nconst xml = $input.item.json.data;\nconst fonte_nome = $('📋 Lista de Fontes RSS').item.json.nome;\nconst esporte_slug = $('📋 Lista de Fontes RSS').item.json.esporte_slug;\n\nif (!xml || typeof xml !== 'string') {\n  console.log(`⚠️ Sem resposta de ${fonte_nome}`);\n  return [];\n}\n\nconst extract = (text, tag) => {\n  const r = new RegExp(\n    `<${tag}[^>]*><!\\\\[CDATA\\\\[([\\\\s\\\\S]*?)\\\\]\\\\]><\\/${tag}>|<${tag}[^>]*>([\\\\s\\\\S]*?)<\\/${tag}>`,\n    'i'\n  );\n  const m = text.match(r);\n  return (m ? (m[1] || m[2]) : '').trim();\n};\n\nconst itemRegex = /<item[^>]*>([\\s\\S]*?)<\\/item>/gi;\nconst items = [];\nlet match;\n\nwhile ((match = itemRegex.exec(xml)) !== null) {\n  const item = match[1];\n  const titulo = extract(item, 'title');\n  const link = extract(item, 'link') || extract(item, 'guid');\n  const descricao = extract(item, 'description');\n\n  const imgMatch = descricao.match(/<img[^>]+src=[\"']([^\"']+)[\"']/i);\n  const imagem_url = imgMatch ? imgMatch[1] : null;\n  const resumo = descricao.replace(/<[^>]+>/g, '').trim().substring(0, 300) || null;\n\n  if (titulo && link) {\n    items.push({ titulo, fonte_url: link, fonte_nome, resumo, imagem_url, esporte_slug });\n  }\n}\n\nconsole.log(`${fonte_nome}: ${items.length} itens encontrados`);\nreturn items.map(i => ({ json: i }));"
+      },
+      "id": "node-parse",
+      "name": "🔍 Parsear XML do RSS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "node-split",
+      "name": "🔄 Um item por vez",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://portaldoesporte.com.br/api/webhook/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "portal-esporte-webhook-2026"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"noticia\",\n  \"titulo\": \"{{ $json.titulo }}\",\n  \"resumo\": \"{{ $json.resumo }}\",\n  \"imagem_url\": \"{{ $json.imagem_url }}\",\n  \"fonte_nome\": \"{{ $json.fonte_nome }}\",\n  \"fonte_url\": \"{{ $json.fonte_url }}\",\n  \"esporte_slug\": \"{{ $json.esporte_slug }}\"\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "node-webhook",
+      "name": "📤 Enviar notícia ao Portal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst titulo = $('🔄 Um item por vez').item.json.titulo;\n\nif (response.success) {\n  console.log(`✅ Salva: ${titulo}`);\n} else if (response.skipped) {\n  console.log(`⏭️ Duplicata: ${titulo}`);\n} else {\n  console.log(`❌ Erro: ${titulo} — ${JSON.stringify(response)}`);\n}\n\nreturn $input.all();"
+      },
+      "id": "node-log",
+      "name": "📝 Log do resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    }
+  ],
+  "connections": {
+    "⏰ Disparar a cada 6h": {
+      "main": [[{ "node": "📋 Lista de Fontes RSS", "type": "main", "index": 0 }]]
+    },
+    "📋 Lista de Fontes RSS": {
+      "main": [[{ "node": "🌐 Buscar RSS Feed", "type": "main", "index": 0 }]]
+    },
+    "🌐 Buscar RSS Feed": {
+      "main": [[{ "node": "🔍 Parsear XML do RSS", "type": "main", "index": 0 }]]
+    },
+    "🔍 Parsear XML do RSS": {
+      "main": [[{ "node": "🔄 Um item por vez", "type": "main", "index": 0 }]]
+    },
+    "🔄 Um item por vez": {
+      "main": [[{ "node": "📤 Enviar notícia ao Portal", "type": "main", "index": 0 }]]
+    },
+    "📤 Enviar notícia ao Portal": {
+      "main": [[{ "node": "📝 Log do resultado", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": ["portal-do-esporte"]
+}

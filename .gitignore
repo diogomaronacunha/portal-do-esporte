@@ -1,1 +1,31 @@
-node_modules/\n.env\n.env.local\n*.log\n.next/\ndist/\n.expo/
+# Dependências
+node_modules/
+
+# Variáveis de ambiente — NUNCA commitar
+.env
+.env.local
+.env*.local
+
+# Next.js
+.next/
+out/
+dist/
+
+# Supabase local
+supabase/.temp/
+supabase/.env
+
+# n8n local
+.n8n/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.expo/
+.vscode/
