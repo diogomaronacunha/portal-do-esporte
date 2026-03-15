@@ -57,7 +57,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://portaldoesporte.com.br/api/webhook/n8n",
+        "url": "https://portal-do-esporte-phi.vercel.app/api/webhook/n8n",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
