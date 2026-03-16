@@ -1,6 +1,7 @@
 import { getNoticiasPendentes } from '@/lib/db/noticias'
 import { formatDate } from '@/lib/utils'
 import AprovarButton from './AprovarButton'
+import ReprocessarButton from './ReprocessarButton'
 
 export default async function AdminNoticiasPage() {
   let noticias: Awaited<ReturnType<typeof getNoticiasPendentes>> = []
@@ -43,9 +44,18 @@ export default async function AdminNoticiasPage() {
                     >
                       Ver original →
                     </a>
+                    <span className={noticia.imagem_url ? 'text-green-500' : 'text-red-400'}>
+                      {noticia.imagem_url ? '✓ imagem' : '✗ sem imagem'}
+                    </span>
+                    <span className={noticia.conteudo ? 'text-green-500' : 'text-red-400'}>
+                      {noticia.conteudo ? '✓ conteúdo' : '✗ sem conteúdo'}
+                    </span>
                   </div>
                 </div>
-                <AprovarButton noticiaId={noticia.id} />
+                <div className="flex flex-col gap-2 flex-shrink-0">
+                  <AprovarButton noticiaId={noticia.id} />
+                  <ReprocessarButton noticiaId={noticia.id} />
+                </div>
               </div>
             </div>
           ))}

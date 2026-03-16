@@ -16,7 +16,10 @@
       "name": "⏰ Disparar a cada 6h",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -26,7 +29,10 @@
       "name": "📋 Lista de Fontes RSS",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -44,7 +50,10 @@
       "name": "🌐 Buscar RSS Feed",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [680, 300],
+      "position": [
+        680,
+        300
+      ],
       "continueOnFail": true
     },
     {
@@ -55,7 +64,10 @@
       "name": "🔍 Parsear XML do RSS",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
@@ -66,7 +78,10 @@
       "name": "🔄 Um item por vez",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [1120, 300]
+      "position": [
+        1120,
+        300
+      ]
     },
     {
       "parameters": {
@@ -84,18 +99,24 @@
       "name": "🔗 Buscar artigo completo",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1340, 300],
+      "position": [
+        1340,
+        300
+      ],
       "continueOnFail": true
     },
     {
       "parameters": {
-        "jsCode": "// Extrai conteúdo completo e melhor imagem do artigo\nconst html = $input.item.json.data || '';\nconst item = $('🔄 Um item por vez').item.json;\n\n// Extrai og:image (melhor imagem disponível)\nconst ogImageMatch =\n  html.match(/<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)[\"']/i) ||\n  html.match(/<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:image[\"']/i);\nconst imagem_url = (ogImageMatch ? ogImageMatch[1] : null) || item.imagem_url || null;\n\n// Tenta extrair conteúdo do artigo via seletores comuns (WordPress, portais de notícia)\nconst contentPatterns = [\n  /<article[^>]*>([\\s\\S]*?)<\\/article>/i,\n  /<div[^>]+class=[\"'][^\"']*entry-content[^\"']*[\"'][^>]*>([\\s\\S]*?)<\\/div>/i,\n  /<div[^>]+class=[\"'][^\"']*post-content[^\"']*[\"'][^>]*>([\\s\\S]*?)<\\/div>/i,\n  /<div[^>]+class=[\"'][^\"']*td-post-content[^\"']*[\"'][^>]*>([\\s\\S]*?)<\\/div>/i,\n  /<div[^>]+class=[\"'][^\"']*article-body[^\"']*[\"'][^>]*>([\\s\\S]*?)<\\/div>/i,\n  /<div[^>]+class=[\"'][^\"']*materia-conteudo[^\"']*[\"'][^>]*>([\\s\\S]*?)<\\/div>/i\n];\n\nlet conteudo = null;\nfor (const pattern of contentPatterns) {\n  const m = html.match(pattern);\n  if (m) {\n    const extracted = m[1]\n      .replace(/<script[\\s\\S]*?<\\/script>/gi, '')\n      .replace(/<style[\\s\\S]*?<\\/style>/gi, '')\n      .replace(/<nav[\\s\\S]*?<\\/nav>/gi, '')\n      .replace(/<aside[\\s\\S]*?<\\/aside>/gi, '')\n      .replace(/<footer[\\s\\S]*?<\\/footer>/gi, '')\n      .trim();\n    if (extracted.length > 200) {\n      conteudo = extracted;\n      break;\n    }\n  }\n}\n\nconsole.log(`📰 ${item.titulo} — conteudo: ${conteudo ? conteudo.length + ' chars' : 'não extraído'} | imagem: ${imagem_url ? 'ok' : 'null'}`);\n\nreturn [{ json: { ...item, conteudo: conteudo || null, imagem_url } }];"
+        "jsCode": "// Extrai conteúdo completo e melhor imagem do artigo\nconst html = $input.item.json.data || '';\nconst item = $('🔄 Um item por vez').item.json;\n\n// Extrai og:image — múltiplos padrões de atributos\nlet imagem_url = item.imagem_url || null;\nconst ogImagePatterns = [\n  /<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)[\"']/i,\n  /<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:image[\"']/i,\n  /<meta[^>]+name=[\"']twitter:image[\"'][^>]+content=[\"']([^\"']+)[\"']/i,\n  /<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+name=[\"']twitter:image[\"']/i,\n];\nfor (const pattern of ogImagePatterns) {\n  const m = html.match(pattern);\n  if (m && m[1] && m[1].startsWith('http')) {\n    imagem_url = m[1];\n    break;\n  }\n}\n\n// Extrai parágrafos a partir de um ponto de ancoragem no HTML\n// Resolve problema de regex com divs aninhados (parava no 1º </div>)\nfunction extractFromAnchor(htmlStr, anchorRegex) {\n  const m = htmlStr.match(anchorRegex);\n  if (!m) return null;\n  const start = htmlStr.indexOf(m[0]);\n  if (start === -1) return null;\n  const chunk = htmlStr.substring(start, start + 25000);\n  const paragraphs = (chunk.match(/<p[^>]*>[\\s\\S]*?<\\/p>/gi) || [])\n    .map(p => p.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim())\n    .filter(p => p.length > 40);\n  if (paragraphs.length === 0) return null;\n  return '<p>' + paragraphs.slice(0, 40).join('</p>\\n<p>') + '</p>';\n}\n\nconst anchors = [\n  /<article[^>]*>/i,\n  /<div[^>]+class=[\"'][^\"']*entry-content[^\"']*[\"']/i,\n  /<div[^>]+class=[\"'][^\"']*post-content[^\"']*[\"']/i,\n  /<div[^>]+class=[\"'][^\"']*td-post-content[^\"']*[\"']/i,\n  /<div[^>]+class=[\"'][^\"']*article-body[^\"']*[\"']/i,\n  /<div[^>]+class=[\"'][^\"']*materia-conteudo[^\"']*[\"']/i,\n  /<div[^>]+class=[\"'][^\"']*conteudo[^\"']*[\"']/i,\n  /<div[^>]+class=[\"'][^\"']*content[^\"']*[\"']/i,\n  /<main[^>]*>/i,\n];\n\nlet conteudo = null;\nfor (const anchor of anchors) {\n  const extracted = extractFromAnchor(html, anchor);\n  if (extracted && extracted.length > 200) {\n    conteudo = extracted;\n    break;\n  }\n}\n\n// Fallback: todos os parágrafos com texto significativo\nif (!conteudo) {\n  const allP = (html.match(/<p[^>]*>[\\s\\S]*?<\\/p>/gi) || [])\n    .map(p => p.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim())\n    .filter(p => p.length > 60);\n  if (allP.length >= 2) {\n    conteudo = '<p>' + allP.slice(0, 30).join('</p>\\n<p>') + '</p>';\n  }\n}\n\nconsole.log(`📰 ${item.titulo} — conteudo: ${conteudo ? conteudo.length + ' chars' : 'não extraído'} | imagem: ${imagem_url ? 'ok' : 'null'}`);\n\nreturn [{ json: { ...item, conteudo: conteudo || null, imagem_url } }];"
       },
       "id": "node-extract",
       "name": "📝 Extrair conteúdo",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 300]
+      "position": [
+        1560,
+        300
+      ]
     },
     {
       "parameters": {
@@ -125,7 +146,10 @@
       "name": "📤 Enviar notícia ao Portal",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1780, 300],
+      "position": [
+        1780,
+        300
+      ],
       "continueOnFail": true
     },
     {
@@ -136,37 +160,106 @@
       "name": "📝 Log do resultado",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2000, 300]
+      "position": [
+        2000,
+        300
+      ]
     }
   ],
   "connections": {
     "⏰ Disparar a cada 6h": {
-      "main": [[{ "node": "📋 Lista de Fontes RSS", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "📋 Lista de Fontes RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "📋 Lista de Fontes RSS": {
-      "main": [[{ "node": "🌐 Buscar RSS Feed", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "🌐 Buscar RSS Feed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "🌐 Buscar RSS Feed": {
-      "main": [[{ "node": "🔍 Parsear XML do RSS", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear XML do RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "🔍 Parsear XML do RSS": {
-      "main": [[{ "node": "🔄 Um item por vez", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "🔄 Um item por vez",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "🔄 Um item por vez": {
-      "main": [[{ "node": "🔗 Buscar artigo completo", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "🔗 Buscar artigo completo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "🔗 Buscar artigo completo": {
-      "main": [[{ "node": "📝 Extrair conteúdo", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "📝 Extrair conteúdo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "📝 Extrair conteúdo": {
-      "main": [[{ "node": "📤 Enviar notícia ao Portal", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "📤 Enviar notícia ao Portal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "📤 Enviar notícia ao Portal": {
-      "main": [[{ "node": "📝 Log do resultado", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "📝 Log do resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "executionOrder": "v1"
   },
-  "tags": ["portal-do-esporte"]
+  "tags": [
+    "portal-do-esporte"
+  ]
 }
