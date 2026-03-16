@@ -41,6 +41,17 @@ export async function getEventoPorId(id: string): Promise<Evento | null> {
   return data
 }
 
+export async function getEventoPorSlug(slug: string): Promise<Evento | null> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('eventos')
+    .select('*, esporte:esportes(id, nome, slug)')
+    .eq('slug', slug)
+    .eq('status', 'aprovado')
+    .single()
+  return data ?? null
+}
+
 export async function getEventosPendentes(): Promise<Evento[]> {
   const supabase = await createClient()
   const { data, error } = await supabase

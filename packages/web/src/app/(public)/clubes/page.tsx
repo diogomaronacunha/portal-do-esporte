@@ -50,7 +50,7 @@ export default async function ClubesPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {clubes.map((clube) => (
-                  <div key={clube.id} className="card p-5 hover:shadow-md transition-shadow">
+                  <Link key={clube.id} href={`/clubes/${clube.slug}`} className="card p-5 hover:shadow-md transition-shadow block">
                     <div className="flex items-center gap-4 mb-3">
                       {clube.logo_url ? (
                         <div className="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
@@ -112,7 +112,7 @@ export default async function ClubesPage() {
                         </a>
                       )}
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </>

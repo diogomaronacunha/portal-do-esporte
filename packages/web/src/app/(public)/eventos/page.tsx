@@ -66,7 +66,7 @@ export default async function EventosPage({ searchParams }: Props) {
         ) : (
           <div className="space-y-4">
             {eventos.map((evento) => (
-              <div key={evento.id} className="card p-5 flex gap-4 hover:shadow-md transition-shadow">
+              <Link key={evento.id} href={`/eventos/${evento.slug}`} className="card p-5 flex gap-4 hover:shadow-md transition-shadow block">
                 {/* Data */}
                 <div className="bg-primary-600 text-white rounded-xl p-3 text-center min-w-[64px] flex-shrink-0">
                   <div className="text-xs font-medium uppercase">
@@ -104,22 +104,9 @@ export default async function EventosPage({ searchParams }: Props) {
 
                 {/* Ação */}
                 <div className="flex-shrink-0 flex flex-col justify-center">
-                  {evento.url_inscricao ? (
-                    <a
-                      href={evento.url_inscricao}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-primary text-sm whitespace-nowrap"
-                    >
-                      Inscrever-se
-                    </a>
-                  ) : (
-                    <span className="text-sm text-gray-400 whitespace-nowrap">
-                      {evento.organizador_contato ?? 'Sem inscrição online'}
-                    </span>
-                  )}
+                  <span className="text-sm text-primary-600 whitespace-nowrap">Ver detalhes →</span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

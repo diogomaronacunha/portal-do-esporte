@@ -14,6 +14,17 @@ export async function getClubesAprovados(limit = 40): Promise<Clube[]> {
   return data ?? []
 }
 
+export async function getClubePorSlug(slug: string): Promise<Clube | null> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('clubes')
+    .select('*, esporte:esportes(id, nome, slug)')
+    .eq('slug', slug)
+    .eq('status', 'aprovado')
+    .single()
+  return data ?? null
+}
+
 export async function getClubesPendentes(): Promise<Clube[]> {
   const supabase = await createClient()
   const { data, error } = await supabase

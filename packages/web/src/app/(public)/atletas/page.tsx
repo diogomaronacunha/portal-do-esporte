@@ -49,7 +49,7 @@ export default async function AtletasPage() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {atletas.map((atleta) => (
-                  <div key={atleta.id} className="card p-5 text-center">
+                  <Link key={atleta.id} href={`/atletas/${atleta.slug}`} className="card p-5 text-center hover:shadow-md transition-shadow block">
                     {atleta.foto_url ? (
                       <div className="relative w-20 h-20 rounded-full overflow-hidden mx-auto mb-3">
                         <Image
@@ -103,7 +103,7 @@ export default async function AtletasPage() {
                         </a>
                       )}
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </>
