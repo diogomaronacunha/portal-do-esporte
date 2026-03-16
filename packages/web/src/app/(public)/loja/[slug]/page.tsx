@@ -37,8 +37,26 @@ export default async function ProdutoPage({ params }: Props) {
 
   const imagens = produto.imagens.length > 0 ? produto.imagens : []
 
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://portal-do-esporte-phi.vercel.app'
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: produto.nome,
+    description: produto.descricao ?? undefined,
+    image: produto.imagens[0] ?? undefined,
+    url: `${BASE_URL}/loja/${produto.slug}`,
+    offers: {
+      '@type': 'Offer',
+      price: produto.preco,
+      priceCurrency: 'BRL',
+      availability: 'https://schema.org/InStock',
+      seller: { '@type': 'Organization', name: produto.lojista?.nome_loja ?? 'Portal do Esporte' },
+    },
+  }
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Header />
       <main className="min-h-screen">
         {/* Breadcrumb */}

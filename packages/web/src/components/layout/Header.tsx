@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { Menu, X, LogOut, User, ShoppingCart } from 'lucide-react'
+import { Menu, X, LogOut, User, ShoppingCart, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useCarrinho } from '@/contexts/CarrinhoContext'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
@@ -21,9 +21,19 @@ const navLinks = [
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const router = useRouter()
   const { count: carrinhoCount } = useCarrinho()
+
+  function handleSearch(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const q = (e.currentTarget.elements.namedItem('q') as HTMLInputElement)?.value.trim()
+    if (q) {
+      setSearchOpen(false)
+      router.push(`/buscar?q=${encodeURIComponent(q)}`)
+    }
+  }
 
   useEffect(() => {
     const supabase = createClient()
@@ -73,6 +83,13 @@ export default function Header() {
 
         {/* Ações Desktop */}
         <div className="hidden md:flex items-center gap-3">
+          <button
+            onClick={() => setSearchOpen(v => !v)}
+            className="p-1.5 text-gray-600 hover:text-primary-600 transition-colors"
+            aria-label="Buscar"
+          >
+            <Search size={20} />
+          </button>
           <Link href="/loja/carrinho" className="relative p-1.5 text-gray-600 hover:text-primary-600 transition-colors">
             <ShoppingCart size={20} />
             {carrinhoCount > 0 && (
@@ -121,9 +138,36 @@ export default function Header() {
         </button>
       </div>
 
+      {/* Barra de busca expansível */}
+      {searchOpen && (
+        <div className="border-t border-gray-100 bg-white px-4 py-3">
+          <form onSubmit={handleSearch} className="flex gap-2 max-w-xl mx-auto">
+            <input
+              name="q"
+              autoFocus
+              placeholder="Buscar notícias, eventos, produtos, atletas..."
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+            />
+            <button type="submit" className="btn-primary text-sm px-4 py-2">
+              Buscar
+            </button>
+          </form>
+        </div>
+      )}
+
       {/* Menu Mobile */}
       {menuOpen && (
         <div className="md:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-3">
+          <form onSubmit={handleSearch} className="flex gap-2">
+            <input
+              name="q"
+              placeholder="Buscar..."
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+            />
+            <button type="submit" className="p-2 text-primary-600">
+              <Search size={18} />
+            </button>
+          </form>
           {navLinks.map((link) => (
             <Link
               key={link.href}

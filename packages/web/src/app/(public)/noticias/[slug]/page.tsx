@@ -43,8 +43,23 @@ export default async function NoticiaPage({ params }: Props) {
 
   if (!noticia) notFound()
 
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://portal-do-esporte-phi.vercel.app'
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    headline: noticia.titulo,
+    description: noticia.resumo ?? undefined,
+    image: noticia.imagem_url ?? undefined,
+    datePublished: noticia.publicado_at ?? noticia.created_at,
+    dateModified: noticia.updated_at,
+    author: { '@type': 'Organization', name: noticia.fonte_nome },
+    publisher: { '@type': 'Organization', name: 'Portal do Esporte', url: BASE_URL },
+    url: `${BASE_URL}/noticias/${noticia.slug}`,
+  }
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Header />
       <main className="max-w-3xl mx-auto px-4 py-10">
         {/* Breadcrumb */}
