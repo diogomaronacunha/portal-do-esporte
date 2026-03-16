@@ -24,6 +24,17 @@ export default async function MinhaLojaPage({
 
   const lojista = await getLojistaPorUsuario(user.id).catch(() => null)
 
+  // Pedidos recebidos pela loja (via itens que referenciam lojista_id)
+  const pedidosRecebidos = lojista
+    ? await supabase
+        .from('pedidos_itens')
+        .select('pedido_id, nome_produto, quantidade, tamanho, preco_unitario, pedido:pedidos(id, status, created_at, endereco_entrega)')
+        .eq('lojista_id', lojista.id)
+        .order('pedido_id', { ascending: false })
+        .limit(20)
+        .then(r => r.data ?? [])
+    : []
+
   if (!lojista) {
     return (
       <>
@@ -133,6 +144,56 @@ export default async function MinhaLojaPage({
                 </div>
               )}
             </>
+          )}
+          {/* Pedidos recebidos */}
+          {lojista.status === 'aprovado' && pedidosRecebidos.length > 0 && (
+            <div className="mt-10">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Pedidos recebidos</h2>
+              <div className="space-y-3">
+                {pedidosRecebidos.map((item, idx) => {
+                  const pedido = (Array.isArray(item.pedido) ? item.pedido[0] : item.pedido) as { id: string; status: string; created_at: string; endereco_entrega: Record<string, string> } | null
+                  const statusMap: Record<string, { label: string; color: string }> = {
+                    aguardando_pagamento: { label: 'Aguardando pag.', color: 'text-yellow-600 bg-yellow-50' },
+                    pago: { label: 'Pago ✓', color: 'text-green-600 bg-green-50' },
+                    em_separacao: { label: 'Em separação', color: 'text-blue-600 bg-blue-50' },
+                    enviado: { label: 'Enviado', color: 'text-blue-600 bg-blue-50' },
+                    entregue: { label: 'Entregue', color: 'text-green-600 bg-green-50' },
+                    cancelado: { label: 'Cancelado', color: 'text-red-600 bg-red-50' },
+                  }
+                  const s = pedido ? (statusMap[pedido.status] ?? { label: pedido.status, color: 'text-gray-600 bg-gray-50' }) : null
+                  const endereco = pedido?.endereco_entrega ?? {}
+
+                  return (
+                    <div key={idx} className="card p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm text-gray-900">
+                            {item.nome_produto}{item.tamanho ? ` (${item.tamanho})` : ''} × {item.quantidade}
+                          </p>
+                          <p className="font-bold text-primary-700 text-sm">{formatCurrency(item.preco_unitario * item.quantidade)}</p>
+                          {endereco.nome && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              📦 {endereco.nome} — {endereco.logradouro}, {endereco.numero}, {endereco.cidade}/{endereco.estado}
+                            </p>
+                          )}
+                          {endereco.telefone && (
+                            <p className="text-xs text-gray-400">📞 {endereco.telefone}</p>
+                          )}
+                        </div>
+                        {s && (
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${s.color}`}>
+                            {s.label}
+                          </span>
+                        )}
+                      </div>
+                      {pedido && (
+                        <p className="text-xs text-gray-300 mt-2">#{pedido.id.slice(0, 8)} · {new Date(pedido.created_at).toLocaleDateString('pt-BR')}</p>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           )}
         </div>
       </main>

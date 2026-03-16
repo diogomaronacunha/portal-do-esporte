@@ -16,6 +16,16 @@ export async function getProdutosAtivos(options: ProdutosOptions = {}): Promise<
   const { categoriaSlug, esporteSlug, q, lojistaId, limit = 24, offset = 0 } = options
   const supabase = await createClient()
 
+  // Resolver slugs em IDs antes de filtrar (filtrar diretamente em tabelas embutidas não funciona no PostgREST)
+  const [categoriaId, esporteId] = await Promise.all([
+    categoriaSlug
+      ? supabase.from('categorias_produto').select('id').eq('slug', categoriaSlug).single().then(r => r.data?.id ?? null)
+      : Promise.resolve(null),
+    esporteSlug
+      ? supabase.from('esportes').select('id').eq('slug', esporteSlug).single().then(r => r.data?.id ?? null)
+      : Promise.resolve(null),
+  ])
+
   let query = supabase
     .from('produtos')
     .select(PRODUTO_SELECT)
@@ -25,8 +35,8 @@ export async function getProdutosAtivos(options: ProdutosOptions = {}): Promise<
 
   if (q) query = query.ilike('nome', `%${q}%`)
   if (lojistaId) query = query.eq('lojista_id', lojistaId)
-  if (categoriaSlug) query = query.eq('categorias_produto.slug', categoriaSlug)
-  if (esporteSlug) query = query.eq('esportes.slug', esporteSlug)
+  if (categoriaId) query = query.eq('categoria_id', categoriaId)
+  if (esporteId) query = query.eq('esporte_id', esporteId)
 
   const { data, error } = await query
   if (error) throw new Error(`Erro ao buscar produtos: ${error.message}`)
