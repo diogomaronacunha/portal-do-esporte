@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '**.supabase.in' },
       { protocol: 'http', hostname: 'portaldoesporte.com.br' },
       { protocol: 'https', hostname: 'portaldoesporte.com.br' },
+      // Imagens externas de notícias agregadas (federações, portais esportivos)
+      { protocol: 'https', hostname: '**' },
+      { protocol: 'http', hostname: '**' },
     ],
   },
 }

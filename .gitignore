@@ -18,6 +18,9 @@ supabase/.env
 # n8n local
 .n8n/
 
+# Arquivos binários grandes (PDFs de design, etc.)
+docs/brand/*.pdf
+
 # Logs
 *.log
 npm-debug.log*
