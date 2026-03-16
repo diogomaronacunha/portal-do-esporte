@@ -51,6 +51,22 @@ export async function getNoticiasPendentes(): Promise<Noticia[]> {
   return data ?? []
 }
 
+export async function countNoticiasPublicadas(
+  options: { q?: string; esporteSlug?: string } = {}
+): Promise<number> {
+  const supabase = await createClient()
+  let query = supabase
+    .from('noticias')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'publicado')
+
+  if (options.q) query = query.ilike('titulo', `%${options.q}%`)
+  if (options.esporteSlug) query = query.eq('esportes.slug', options.esporteSlug)
+
+  const { count } = await query
+  return count ?? 0
+}
+
 export async function getNoticiasPorEsporte(esporteSlug: string, limit = 12): Promise<Noticia[]> {
   const supabase = await createClient()
   const { data, error } = await supabase

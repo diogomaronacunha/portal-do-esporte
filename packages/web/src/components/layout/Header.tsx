@@ -12,6 +12,7 @@ const navLinks = [
   { href: '/noticias', label: 'Notícias' },
   { href: '/eventos', label: 'Eventos' },
   { href: '/atletas', label: 'Atletas' },
+  { href: '/clubes', label: 'Clubes' },
 ]
 
 export default function Header() {

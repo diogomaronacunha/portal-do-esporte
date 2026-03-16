@@ -55,6 +55,7 @@ export const config = {
     '/admin/:path*',
     '/cadastrar-evento',
     '/cadastrar-atleta',
+    '/cadastrar-clube',
     '/meu-perfil',
   ],
 }

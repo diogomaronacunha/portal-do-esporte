@@ -1,8 +1,5 @@
 import Link from 'next/link'
 
-// TODO: Adicionar verificação de auth + role admin via Supabase
-// Por enquanto, acesso aberto durante desenvolvimento
-
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-gray-100">
