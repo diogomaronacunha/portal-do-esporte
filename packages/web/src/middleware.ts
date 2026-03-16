@@ -58,6 +58,7 @@ export const config = {
     '/cadastrar-clube',
     '/cadastrar-lojista',
     '/minha-loja/:path*',
+    '/loja/checkout',
     '/meu-perfil',
   ],
 }

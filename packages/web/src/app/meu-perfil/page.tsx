@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
-import { Calendar, Newspaper, User, LogOut } from 'lucide-react'
+import { Calendar, Newspaper, User, LogOut, ShoppingBag } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils'
 import { formatDate } from '@/lib/utils'
 import type { Metadata } from 'next'
 
@@ -17,7 +18,7 @@ export default async function MeuPerfilPage() {
 
   if (!user) redirect('/login')
 
-  const [{ data: profile }, { data: eventosUsuario }, { data: noticiasCount }] = await Promise.all([
+  const [{ data: profile }, { data: eventosUsuario }, { data: noticiasCount }, { data: pedidosUsuario }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase
       .from('eventos')
@@ -29,6 +30,12 @@ export default async function MeuPerfilPage() {
       .from('noticias')
       .select('id', { count: 'exact', head: true })
       .eq('autor_id', user.id),
+    supabase
+      .from('pedidos')
+      .select('id, status, total, created_at, pedidos_itens(nome_produto, quantidade, tamanho)')
+      .eq('comprador_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(5),
   ])
 
   const nome = profile?.nome ?? user.email?.split('@')[0] ?? 'Usuário'
@@ -120,6 +127,46 @@ export default async function MeuPerfilPage() {
                       <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusColor} capitalize flex-shrink-0`}>
                         {evento.status}
                       </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Meus pedidos */}
+          {pedidosUsuario && pedidosUsuario.length > 0 && (
+            <div className="card p-5">
+              <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <ShoppingBag size={18} className="text-primary-600" />
+                Meus pedidos
+              </h2>
+              <div className="space-y-3">
+                {pedidosUsuario.map((pedido) => {
+                  const statusMap: Record<string, { label: string; color: string }> = {
+                    aguardando_pagamento: { label: 'Aguardando pagamento', color: 'text-yellow-600 bg-yellow-50' },
+                    pago: { label: 'Pago', color: 'text-green-600 bg-green-50' },
+                    em_separacao: { label: 'Em separação', color: 'text-blue-600 bg-blue-50' },
+                    enviado: { label: 'Enviado', color: 'text-blue-600 bg-blue-50' },
+                    entregue: { label: 'Entregue', color: 'text-green-600 bg-green-50' },
+                    cancelado: { label: 'Cancelado', color: 'text-red-600 bg-red-50' },
+                  }
+                  const s = statusMap[pedido.status] ?? { label: pedido.status, color: 'text-gray-600 bg-gray-50' }
+                  const itens = (pedido.pedidos_itens as { nome_produto: string; quantidade: number; tamanho: string | null }[]) ?? []
+
+                  return (
+                    <div key={pedido.id} className="py-3 border-b border-gray-100 last:border-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs text-gray-400">{formatDate(pedido.created_at)} · #{pedido.id.slice(0, 8)}</p>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${s.color}`}>{s.label}</span>
+                      </div>
+                      <p className="text-sm text-gray-700">
+                        {itens.slice(0, 2).map((i, idx) => (
+                          <span key={idx}>{i.nome_produto}{i.tamanho ? ` (${i.tamanho})` : ''} × {i.quantidade}{idx < Math.min(itens.length, 2) - 1 ? ', ' : ''}</span>
+                        ))}
+                        {itens.length > 2 && <span className="text-gray-400"> +{itens.length - 2} itens</span>}
+                      </p>
+                      <p className="font-bold text-primary-700 text-sm mt-1">{formatCurrency(pedido.total)}</p>
                     </div>
                   )
                 })}
