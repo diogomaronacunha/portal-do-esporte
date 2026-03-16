@@ -4,13 +4,14 @@ import Link from 'next/link'
 export default async function AdminDashboard() {
   const supabase = await createClient()
 
-  const [noticias, eventos, atletas, clubes, lojistas, produtos] = await Promise.all([
+  const [noticias, eventos, atletas, clubes, lojistas, produtos, ofertas] = await Promise.all([
     supabase.from('noticias').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
     supabase.from('eventos').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
     supabase.from('atletas').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
     supabase.from('clubes').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
     supabase.from('lojistas').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
     supabase.from('produtos').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
+    supabase.from('ofertas').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
   ])
 
   const stats = [
@@ -50,9 +51,15 @@ export default async function AdminDashboard() {
       href: '/admin/produtos',
       color: 'bg-accent-50 text-accent-800 border-accent-200',
     },
+    {
+      label: 'Ofertas Pendentes',
+      value: ofertas.count ?? 0,
+      href: '/admin/ofertas',
+      color: 'bg-teal-50 text-teal-800 border-teal-200',
+    },
   ]
 
-  const total = (noticias.count ?? 0) + (eventos.count ?? 0) + (atletas.count ?? 0) + (clubes.count ?? 0) + (lojistas.count ?? 0) + (produtos.count ?? 0)
+  const total = (noticias.count ?? 0) + (eventos.count ?? 0) + (atletas.count ?? 0) + (clubes.count ?? 0) + (lojistas.count ?? 0) + (produtos.count ?? 0) + (ofertas.count ?? 0)
 
   return (
     <div>
@@ -98,6 +105,9 @@ export default async function AdminDashboard() {
           </Link>
           <Link href="/admin/produtos" className="btn-primary text-sm">
             Aprovar produtos →
+          </Link>
+          <Link href="/admin/ofertas" className="btn-primary text-sm">
+            Aprovar ofertas →
           </Link>
         </div>
       </div>
