@@ -1,24 +1,29 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { Suspense } from 'react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import FiltrosBusca from '@/components/FiltrosBusca'
 import { getEventosAprovados } from '@/lib/db/eventos'
+import { getEsportesAtivos } from '@/lib/db/esportes'
 import { formatDate } from '@/lib/utils'
 
-export const revalidate = 900 // 15 minutos
+export const revalidate = 900
 
 export const metadata: Metadata = {
   title: 'Calendário de Eventos',
   description: 'Calendário completo de eventos esportivos no Rio Grande do Sul.',
 }
 
-export default async function EventosPage() {
-  let eventos: Awaited<ReturnType<typeof getEventosAprovados>> = []
-  try {
-    eventos = await getEventosAprovados(50)
-  } catch {
-    // Banco ainda não configurado
-  }
+type Props = { searchParams: Promise<{ q?: string; esporte?: string }> }
+
+export default async function EventosPage({ searchParams }: Props) {
+  const { q, esporte } = await searchParams
+
+  const [eventos, esportes] = await Promise.all([
+    getEventosAprovados(50, { q, esporteSlug: esporte }).catch(() => []),
+    getEsportesAtivos().catch(() => []),
+  ])
 
   return (
     <>
@@ -30,19 +35,33 @@ export default async function EventosPage() {
             + Cadastrar Evento
           </Link>
         </div>
-        <p className="text-gray-500 mb-8">
+        <p className="text-gray-500 mb-6">
           Eventos esportivos no Rio Grande do Sul — corridas, campeonatos, torneios e muito mais.
         </p>
 
+        <Suspense>
+          <FiltrosBusca esportes={esportes} placeholder="Buscar eventos..." />
+        </Suspense>
+
         {eventos.length === 0 ? (
           <div className="text-center py-20 text-gray-400">
-            <p className="text-lg font-medium">Nenhum evento cadastrado ainda.</p>
-            <p className="text-sm mt-2 mb-6">
-              Tem um evento esportivo? Cadastre gratuitamente.
-            </p>
-            <Link href="/cadastrar-evento" className="btn-primary inline-block">
-              Cadastrar Evento
-            </Link>
+            <p className="text-lg font-medium">Nenhum evento encontrado.</p>
+            {(q || esporte) ? (
+              <p className="text-sm mt-2">
+                Tente outros termos ou{' '}
+                <Link href="/eventos" className="text-primary-600 hover:underline">
+                  remova os filtros
+                </Link>
+                .
+              </p>
+            ) : (
+              <>
+                <p className="text-sm mt-2 mb-6">Tem um evento esportivo? Cadastre gratuitamente.</p>
+                <Link href="/cadastrar-evento" className="btn-primary inline-block">
+                  Cadastrar Evento
+                </Link>
+              </>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -80,6 +99,7 @@ export default async function EventosPage() {
                   {evento.descricao && (
                     <p className="text-gray-500 text-sm mt-2 line-clamp-2">{evento.descricao}</p>
                   )}
+                  <p className="text-gray-400 text-xs mt-2">{formatDate(evento.data_inicio)}</p>
                 </div>
 
                 {/* Ação */}

@@ -1,11 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Evento } from '@/types/database'
 
-export async function getEventosAprovados(limit = 20): Promise<Evento[]> {
+export async function getEventosAprovados(
+  limit = 20,
+  options: { q?: string; esporteSlug?: string } = {}
+): Promise<Evento[]> {
   const supabase = await createClient()
   const hoje = new Date().toISOString().split('T')[0]
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('eventos')
     .select('*, esporte:esportes(id, nome, slug)')
     .eq('status', 'aprovado')
@@ -13,6 +16,14 @@ export async function getEventosAprovados(limit = 20): Promise<Evento[]> {
     .order('data_inicio', { ascending: true })
     .limit(limit)
 
+  if (options.q) {
+    query = query.ilike('titulo', `%${options.q}%`)
+  }
+  if (options.esporteSlug) {
+    query = query.eq('esportes.slug', options.esporteSlug)
+  }
+
+  const { data, error } = await query
   if (error) throw new Error(`Erro ao buscar eventos: ${error.message}`)
   return data ?? []
 }

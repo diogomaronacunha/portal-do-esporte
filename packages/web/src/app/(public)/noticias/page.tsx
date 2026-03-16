@@ -1,41 +1,56 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
+import { Suspense } from 'react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import FiltrosBusca from '@/components/FiltrosBusca'
 import { getNoticiasPublicadas } from '@/lib/db/noticias'
+import { getEsportesAtivos } from '@/lib/db/esportes'
 import { formatDate } from '@/lib/utils'
 
-export const revalidate = 1800 // 30 minutos
+export const revalidate = 1800
 
 export const metadata: Metadata = {
   title: 'Notícias',
   description: 'Últimas notícias do esporte amador gaúcho agregadas das federações do Rio Grande do Sul.',
 }
 
-export default async function NoticiasPage() {
-  let noticias: Awaited<ReturnType<typeof getNoticiasPublicadas>> = []
-  try {
-    noticias = await getNoticiasPublicadas(24)
-  } catch {
-    // Banco ainda não configurado — exibe estado vazio
-  }
+type Props = { searchParams: Promise<{ q?: string; esporte?: string }> }
+
+export default async function NoticiasPage({ searchParams }: Props) {
+  const { q, esporte } = await searchParams
+
+  const [noticias, esportes] = await Promise.all([
+    getNoticiasPublicadas(24, 0, { q, esporteSlug: esporte }).catch(() => []),
+    getEsportesAtivos().catch(() => []),
+  ])
 
   return (
     <>
       <Header />
       <main className="max-w-6xl mx-auto px-4 py-10">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Notícias</h1>
-        <p className="text-gray-500 mb-8">
+        <p className="text-gray-500 mb-6">
           Notícias agregadas das federações esportivas do Rio Grande do Sul.
         </p>
 
+        <Suspense>
+          <FiltrosBusca esportes={esportes} placeholder="Buscar notícias..." />
+        </Suspense>
+
         {noticias.length === 0 ? (
           <div className="text-center py-20 text-gray-400">
-            <p className="text-lg font-medium">Nenhuma notícia publicada ainda.</p>
-            <p className="text-sm mt-2">
-              Em breve você encontrará aqui as últimas notícias das federações gaúchas.
-            </p>
+            <p className="text-lg font-medium">Nenhuma notícia encontrada.</p>
+            {(q || esporte) && (
+              <p className="text-sm mt-2">
+                Tente outros termos ou{' '}
+                <Link href="/noticias" className="text-primary-600 hover:underline">
+                  remova os filtros
+                </Link>
+                .
+              </p>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

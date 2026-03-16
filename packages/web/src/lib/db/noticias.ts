@@ -1,15 +1,27 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Noticia } from '@/types/database'
 
-export async function getNoticiasPublicadas(limit = 12, offset = 0): Promise<Noticia[]> {
+export async function getNoticiasPublicadas(
+  limit = 12,
+  offset = 0,
+  options: { q?: string; esporteSlug?: string } = {}
+): Promise<Noticia[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  let query = supabase
     .from('noticias')
     .select('*, esporte:esportes(id, nome, slug)')
     .eq('status', 'publicado')
     .order('publicado_at', { ascending: false })
     .range(offset, offset + limit - 1)
 
+  if (options.q) {
+    query = query.ilike('titulo', `%${options.q}%`)
+  }
+  if (options.esporteSlug) {
+    query = query.eq('esportes.slug', options.esporteSlug)
+  }
+
+  const { data, error } = await query
   if (error) throw new Error(`Erro ao buscar notícias: ${error.message}`)
   return data ?? []
 }
