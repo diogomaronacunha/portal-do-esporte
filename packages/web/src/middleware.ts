@@ -56,6 +56,8 @@ export const config = {
     '/cadastrar-evento',
     '/cadastrar-atleta',
     '/cadastrar-clube',
+    '/cadastrar-lojista',
+    '/minha-loja/:path*',
     '/meu-perfil',
   ],
 }

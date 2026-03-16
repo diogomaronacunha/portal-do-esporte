@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { Menu, X, LogOut, User } from 'lucide-react'
+import { Menu, X, LogOut, User, ShoppingCart } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useCarrinho } from '@/contexts/CarrinhoContext'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 const navLinks = [
@@ -13,12 +14,15 @@ const navLinks = [
   { href: '/eventos', label: 'Eventos' },
   { href: '/atletas', label: 'Atletas' },
   { href: '/clubes', label: 'Clubes' },
+  { href: '/loja', label: 'Loja' },
+  { href: '/lojistas', label: 'Lojistas' },
 ]
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const router = useRouter()
+  const { count: carrinhoCount } = useCarrinho()
 
   useEffect(() => {
     const supabase = createClient()
@@ -68,6 +72,14 @@ export default function Header() {
 
         {/* Ações Desktop */}
         <div className="hidden md:flex items-center gap-3">
+          <Link href="/loja/carrinho" className="relative p-1.5 text-gray-600 hover:text-primary-600 transition-colors">
+            <ShoppingCart size={20} />
+            {carrinhoCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-accent-500 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
+                {carrinhoCount > 9 ? '9+' : carrinhoCount}
+              </span>
+            )}
+          </Link>
           <Link
             href="/cadastrar-evento"
             className="text-sm font-medium text-primary-600 hover:text-primary-700"

@@ -18,6 +18,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             { href: '/admin/eventos', label: 'Eventos' },
             { href: '/admin/atletas', label: 'Atletas' },
             { href: '/admin/clubes', label: 'Clubes' },
+            { href: '/admin/lojistas', label: 'Lojistas' },
+            { href: '/admin/produtos', label: 'Produtos' },
           ].map((item) => (
             <Link
               key={item.href}

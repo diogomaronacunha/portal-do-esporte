@@ -4,11 +4,13 @@ import Link from 'next/link'
 export default async function AdminDashboard() {
   const supabase = await createClient()
 
-  const [noticias, eventos, atletas, clubes] = await Promise.all([
+  const [noticias, eventos, atletas, clubes, lojistas, produtos] = await Promise.all([
     supabase.from('noticias').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
     supabase.from('eventos').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
     supabase.from('atletas').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
     supabase.from('clubes').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
+    supabase.from('lojistas').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
+    supabase.from('produtos').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
   ])
 
   const stats = [
@@ -36,9 +38,21 @@ export default async function AdminDashboard() {
       href: '/admin/clubes',
       color: 'bg-green-50 text-green-800 border-green-200',
     },
+    {
+      label: 'Lojistas Pendentes',
+      value: lojistas.count ?? 0,
+      href: '/admin/lojistas',
+      color: 'bg-orange-50 text-orange-800 border-orange-200',
+    },
+    {
+      label: 'Produtos Pendentes',
+      value: produtos.count ?? 0,
+      href: '/admin/produtos',
+      color: 'bg-accent-50 text-accent-800 border-accent-200',
+    },
   ]
 
-  const total = (noticias.count ?? 0) + (eventos.count ?? 0) + (atletas.count ?? 0) + (clubes.count ?? 0)
+  const total = (noticias.count ?? 0) + (eventos.count ?? 0) + (atletas.count ?? 0) + (clubes.count ?? 0) + (lojistas.count ?? 0) + (produtos.count ?? 0)
 
   return (
     <div>
@@ -78,6 +92,12 @@ export default async function AdminDashboard() {
           </Link>
           <Link href="/admin/clubes" className="btn-primary text-sm">
             Aprovar clubes →
+          </Link>
+          <Link href="/admin/lojistas" className="btn-primary text-sm">
+            Aprovar lojistas →
+          </Link>
+          <Link href="/admin/produtos" className="btn-primary text-sm">
+            Aprovar produtos →
           </Link>
         </div>
       </div>
