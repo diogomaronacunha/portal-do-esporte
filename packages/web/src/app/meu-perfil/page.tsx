@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
-import { Calendar, Newspaper, User, LogOut, ShoppingBag } from 'lucide-react'
+import { Calendar, Newspaper, User, LogOut, ShoppingBag, Ticket } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { formatDate } from '@/lib/utils'
 import type { Metadata } from 'next'
@@ -18,7 +18,7 @@ export default async function MeuPerfilPage() {
 
   if (!user) redirect('/login')
 
-  const [{ data: profile }, { data: eventosUsuario }, { data: noticiasCount }, { data: pedidosUsuario }] = await Promise.all([
+  const [{ data: profile }, { data: eventosUsuario }, { data: noticiasCount }, { data: pedidosUsuario }, { data: cuponsUsuario }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase
       .from('eventos')
@@ -36,6 +36,12 @@ export default async function MeuPerfilPage() {
       .eq('comprador_id', user.id)
       .order('created_at', { ascending: false })
       .limit(5),
+    supabase
+      .from('cupons_oferta')
+      .select('id, codigo, usado, created_at, oferta:ofertas(titulo, slug, preco_oferta, prestador:prestadores(nome_empresa))')
+      .eq('comprador_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(10),
   ])
 
   const nome = profile?.nome ?? user.email?.split('@')[0] ?? 'Usuário'
@@ -167,6 +173,36 @@ export default async function MeuPerfilPage() {
                         {itens.length > 2 && <span className="text-gray-400"> +{itens.length - 2} itens</span>}
                       </p>
                       <p className="font-bold text-primary-700 text-sm mt-1">{formatCurrency(pedido.total)}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Meus cupons */}
+          {cuponsUsuario && cuponsUsuario.length > 0 && (
+            <div className="card p-5">
+              <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Ticket size={18} className="text-accent-500" />
+                Meus cupons de oferta
+              </h2>
+              <div className="space-y-3">
+                {cuponsUsuario.map((cupom) => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const oferta = Array.isArray(cupom.oferta) ? (cupom.oferta as any[])[0] : cupom.oferta
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const prestador = Array.isArray(oferta?.prestador) ? (oferta.prestador as any[])[0] : oferta?.prestador
+                  return (
+                    <div key={cupom.id} className="flex items-center justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{oferta?.titulo ?? 'Oferta'}</p>
+                        <p className="text-xs text-gray-400">{prestador?.nome_empresa} · {formatDate(cupom.created_at)}</p>
+                        <p className="font-mono text-sm text-primary-700 mt-0.5 font-bold tracking-widest">{cupom.codigo}</p>
+                      </div>
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ${cupom.usado ? 'bg-gray-100 text-gray-400' : 'bg-green-50 text-green-700'}`}>
+                        {cupom.usado ? 'Usado' : 'Disponível'}
+                      </span>
                     </div>
                   )
                 })}
