@@ -40,6 +40,7 @@ export default function Footer() {
                 { href: '/loja', label: 'Produtos' },
                 { href: '/lojistas', label: 'Lojistas' },
                 { href: '/ofertas', label: 'Ofertas' },
+                { href: '/prestadores', label: 'Serviços Esportivos' },
                 { href: '/cadastrar-lojista', label: 'Vender no portal' },
               ].map((link) => (
                 <li key={link.href}>

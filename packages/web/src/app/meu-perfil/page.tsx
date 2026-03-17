@@ -18,7 +18,7 @@ export default async function MeuPerfilPage() {
 
   if (!user) redirect('/login')
 
-  const [{ data: profile }, { data: eventosUsuario }, { data: noticiasCount }, { data: pedidosUsuario }, { data: cuponsUsuario }] = await Promise.all([
+  const [{ data: profile }, { data: eventosUsuario }, { data: noticiasCount }, { data: pedidosUsuario }, { data: cuponsUsuario }, { data: atletaUsuario }, { data: lojistaUsuario }, { data: prestadorUsuario }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase
       .from('eventos')
@@ -42,6 +42,9 @@ export default async function MeuPerfilPage() {
       .eq('comprador_id', user.id)
       .order('created_at', { ascending: false })
       .limit(10),
+    supabase.from('atletas').select('id, slug').eq('criado_por', user.id).eq('status', 'aprovado').maybeSingle(),
+    supabase.from('lojistas').select('id, slug').eq('usuario_id', user.id).maybeSingle(),
+    supabase.from('prestadores').select('id, slug').eq('usuario_id', user.id).maybeSingle(),
   ])
 
   const nome = profile?.nome ?? user.email?.split('@')[0] ?? 'Usuário'
@@ -97,9 +100,25 @@ export default async function MeuPerfilPage() {
               <Link href="/cadastrar-evento" className="btn-primary text-sm">
                 + Cadastrar evento
               </Link>
-              <Link href="/cadastrar-atleta" className="px-4 py-2 border border-primary-600 text-primary-600 hover:bg-primary-50 rounded-lg text-sm font-medium transition-colors">
-                + Cadastrar atleta
-              </Link>
+              {atletaUsuario ? (
+                <Link href={`/atletas/${atletaUsuario.slug}`} className="px-4 py-2 border border-primary-600 text-primary-600 hover:bg-primary-50 rounded-lg text-sm font-medium transition-colors">
+                  Ver meu perfil de atleta
+                </Link>
+              ) : (
+                <Link href="/cadastrar-atleta" className="px-4 py-2 border border-primary-600 text-primary-600 hover:bg-primary-50 rounded-lg text-sm font-medium transition-colors">
+                  + Cadastrar como atleta
+                </Link>
+              )}
+              {lojistaUsuario && (
+                <Link href="/minha-loja" className="px-4 py-2 border border-accent-500 text-accent-600 hover:bg-orange-50 rounded-lg text-sm font-medium transition-colors">
+                  Minha Loja
+                </Link>
+              )}
+              {prestadorUsuario && (
+                <Link href="/meu-espaco" className="px-4 py-2 border border-accent-500 text-accent-600 hover:bg-orange-50 rounded-lg text-sm font-medium transition-colors">
+                  Meu Espaço
+                </Link>
+              )}
               {isAdmin && (
                 <Link href="/admin" className="px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white rounded-lg text-sm font-medium transition-colors">
                   Painel Admin

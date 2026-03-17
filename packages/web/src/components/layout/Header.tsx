@@ -17,6 +17,7 @@ const navLinks = [
   { href: '/loja', label: 'Loja' },
   { href: '/lojistas', label: 'Lojistas' },
   { href: '/ofertas', label: 'Ofertas' },
+  { href: '/prestadores', label: 'Serviços' },
 ]
 
 export default function Header() {
