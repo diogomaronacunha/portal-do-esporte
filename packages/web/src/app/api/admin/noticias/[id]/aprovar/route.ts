@@ -1,24 +1,17 @@
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/supabase/requireAdmin'
+import { createAdminClient } from '@/lib/supabase/admin'
 
-type Params = { params: Promise<{ id: string }> }
-
-export async function POST(_req: Request, { params }: Params) {
+export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const auth = await requireAdmin()
   if (auth.error) return auth.error
 
-  const { error } = await auth.supabase
+  const { error } = await createAdminClient()
     .from('noticias')
-    .update({
-      status: 'publicado',
-      publicado_at: new Date().toISOString(),
-    })
+    .update({ status: 'publicado', aprovado_por: auth.userId, publicado_at: new Date().toISOString() })
     .eq('id', id)
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }

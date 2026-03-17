@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/supabase/requireAdmin'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -8,10 +9,12 @@ export async function POST(_req: Request, { params }: Params) {
   const auth = await requireAdmin()
   if (auth.error) return auth.error
 
-  const { error } = await auth.supabase
+  const supabase = createAdminClient()
+  const { error } = await supabase
     .from('eventos')
     .update({
       status: 'aprovado',
+      aprovado_por: auth.userId,
       aprovado_at: new Date().toISOString(),
     })
     .eq('id', id)

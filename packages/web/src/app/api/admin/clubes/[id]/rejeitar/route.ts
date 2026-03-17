@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/supabase/requireAdmin'
+import { createAdminClient } from '@/lib/supabase/admin'
 
-type Params = { params: Promise<{ id: string }> }
-
-export async function POST(_req: Request, { params }: Params) {
+export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const auth = await requireAdmin()
   if (auth.error) return auth.error
 
-  const { error } = await auth.supabase
+  const { error } = await createAdminClient()
     .from('clubes')
     .update({ status: 'rejeitado' })
     .eq('id', id)
