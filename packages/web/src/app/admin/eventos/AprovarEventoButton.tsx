@@ -10,8 +10,15 @@ export default function AprovarEventoButton({ eventoId }: { eventoId: string }) 
   async function handleAprovar() {
     setLoading(true)
     try {
-      await fetch(`/api/admin/eventos/${eventoId}/aprovar`, { method: 'POST' })
+      const res = await fetch(`/api/admin/eventos/${eventoId}/aprovar`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(`Erro ao aprovar: ${data.error || res.status}`)
+        return
+      }
       router.refresh()
+    } catch (e) {
+      alert(`Erro inesperado: ${e}`)
     } finally {
       setLoading(false)
     }
@@ -20,8 +27,15 @@ export default function AprovarEventoButton({ eventoId }: { eventoId: string }) 
   async function handleRejeitar() {
     setLoading(true)
     try {
-      await fetch(`/api/admin/eventos/${eventoId}/rejeitar`, { method: 'POST' })
+      const res = await fetch(`/api/admin/eventos/${eventoId}/rejeitar`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(`Erro ao rejeitar: ${data.error || res.status}`)
+        return
+      }
       router.refresh()
+    } catch (e) {
+      alert(`Erro inesperado: ${e}`)
     } finally {
       setLoading(false)
     }

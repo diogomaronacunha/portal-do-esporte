@@ -1,0 +1,277 @@
+{
+  "name": "Portal do Esporte — Scraping de Notícias RSS",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "56ec3cf4-893b-4c6c-b240-9606b79bd050",
+      "name": "⏰ Disparar a cada 6h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        8944,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// FONTES RSS — Federações Gaúchas confirmadas\n// ativo: true = será buscado a cada 6h\n// ativo: false = aguardando validação\n// ============================================================\nconst fontes = [\n\n  // ✅ RSS CONFIRMADOS — WordPress com /feed nativo\n  {\n    nome: 'Federação Gaúcha de Ciclismo',\n    url_rss: 'https://www.fgc.com.br/feed/',\n    esporte_slug: 'ciclismo',\n    ativo: true\n  },\n  {\n    nome: 'IFBB RS (Fisiculturismo)',\n    url_rss: 'https://www.ifbbrs.com.br/feed/',\n    esporte_slug: 'fisiculturismo',\n    ativo: true\n  },\n  {\n    nome: 'Federação Gaúcha de Judô',\n    url_rss: 'https://judors.com.br/feed/',\n    esporte_slug: 'judo',\n    ativo: true\n  },\n\n  // ✅ RSS de referência nacional\n  {\n    nome: 'GloboEsporte',\n    url_rss: 'https://ge.globo.com/rss/atomfeed.xml',\n    esporte_slug: 'futebol',\n    ativo: true\n  },\n\n  // ⏳ SEM RSS — SPA/custom (scraping futuro via Apify)\n  // FGARS (Atletismo): https://www.fgars.org/#/pages/news — SPA, sem RSS\n  // Tênis Integrado: https://www.tenisintegrado.com.br — backend Java, sem RSS\n\n  // ✅ RSS CONFIRMADOS — validados em 2026-03-16\n  {\n    nome: 'Federação Gaúcha de Basketball',\n    url_rss: 'https://basquetegaucho.com.br/feed/',\n    esporte_slug: 'basquete',\n    ativo: true\n  },\n\n  // ⏳ SEM RSS — aguardando validação ou site sem feed\n  {\n    nome: 'Federação Gaúcha de Futebol',\n    url_rss: 'https://www.fgf.com.br/feed',\n    esporte_slug: 'futebol',\n    ativo: false\n  },\n  {\n    nome: 'Federação Gaúcha de Vôlei',\n    url_rss: 'https://www.fgv.com.br/feed',\n    esporte_slug: 'volei',\n    ativo: false\n  }\n];\n\nreturn fontes\n  .filter(f => f.ativo)\n  .map(f => ({ json: f }));"
+      },
+      "id": "1a120d6a-ce48-44a4-8950-f96abe6ea166",
+      "name": "📋 Lista de Fontes RSS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9168,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url_rss }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "745bd72c-6115-4eb4-8ab4-5d62781c0d28",
+      "name": "🌐 Buscar RSS Feed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9392,
+        1440
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parsear XML do RSS e extrair itens\nconst xml = $input.item.json.data;\nconst fonte_nome = $('📋 Lista de Fontes RSS').item.json.nome;\nconst esporte_slug = $('📋 Lista de Fontes RSS').item.json.esporte_slug;\n\nif (!xml || typeof xml !== 'string') {\n  console.log(`⚠️ Sem resposta de ${fonte_nome}`);\n  return [];\n}\n\n// Decodifica entidades HTML (named + numeric) — fix encoding português\nconst decodeEntities = (str) => {\n  if (!str) return str;\n  const entities = {\n    '&amp;': '&', '&lt;': '<', '&gt;': '>',\n    '&nbsp;': ' ', '&aacute;': 'á', '&eacute;': 'é', '&iacute;': 'í',\n    '&oacute;': 'ó', '&uacute;': 'ú', '&Aacute;': 'Á', '&Eacute;': 'É',\n    '&Iacute;': 'Í', '&Oacute;': 'Ó', '&Uacute;': 'Ú', '&atilde;': 'ã',\n    '&otilde;': 'õ', '&Atilde;': 'Ã', '&Otilde;': 'Õ', '&ccedil;': 'ç',\n    '&Ccedil;': 'Ç', '&agrave;': 'à', '&egrave;': 'è', '&acirc;': 'â',\n    '&ecirc;': 'ê', '&ocirc;': 'ô', '&ucirc;': 'û', '&ndash;': '–',\n    '&mdash;': '—', '&hellip;': '…', '&lsquo;': '\\u2018', '&rsquo;': '\\u2019',\n    '&ldquo;': '\\u201C', '&rdquo;': '\\u201D'\n  };\n  return str\n    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))\n    .replace(/&#([0-9]+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))\n    .replace(/&[a-zA-Z]+;/g, (ent) => entities[ent] || ent);\n};\n\nconst extract = (text, tag) => {\n  const r = new RegExp(\n    `<${tag}[^>]*><!\\\\[CDATA\\\\[([\\\\s\\\\S]*?)\\\\]\\\\]><\\/${tag}>|<${tag}[^>]*>([\\\\s\\\\S]*?)<\\/${tag}>`,\n    'i'\n  );\n  const m = text.match(r);\n  return (m ? (m[1] || m[2]) : '').trim();\n};\n\nconst itemRegex = /<item[^>]*>([\\s\\S]*?)<\\/item>/gi;\nconst items = [];\nlet match;\n\nwhile ((match = itemRegex.exec(xml)) !== null) {\n  const item = match[1];\n  const titulo = decodeEntities(extract(item, 'title'));\n  const link = extract(item, 'link') || extract(item, 'guid');\n  const descricao = extract(item, 'description');\n\n  // Extrai link: RSS padrão ou Atom (<link href=\"URL\" />)\n  const linkAtomMatch = item.match(/<link[^>]+href=[\"']([^\"']+)[\"'][^>]*\\/?>/i);\n  const fonte_url = link || (linkAtomMatch ? linkAtomMatch[1] : null);\n\n  const imgMatch = descricao.match(/<img[^>]+src=[\"']([^\"']+)[\"']/i);\n  const imagem_url = imgMatch ? imgMatch[1] : null;\n  const resumo = decodeEntities(descricao.replace(/<[^>]+>/g, '').trim().substring(0, 300)) || null;\n\n  if (titulo && fonte_url) {\n    items.push({ titulo, fonte_url, fonte_nome, resumo, imagem_url, esporte_slug });\n  }\n}\n\nconsole.log(`${fonte_nome}: ${items.length} itens encontrados`);\nreturn items.map(i => ({ json: i }));"
+      },
+      "id": "a651aa29-2dbb-4d3a-aa98-84c29effbbf7",
+      "name": "🔍 Parsear XML do RSS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9616,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "3912651b-6ace-4f9d-b97f-e00eef8e827d",
+      "name": "🔄 Um item por vez",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        9824,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.fonte_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "2e94122d-803f-4038-8c4a-0e79ea939169",
+      "name": "🔗 Buscar artigo completo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10064,
+        1600
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrai conteúdo completo e melhor imagem do artigo\nconst html = $input.item.json.data || '';\nconst item = $('🔄 Um item por vez').item.json;\n\n// Extrai og:image — múltiplos padrões de atributos\nlet imagem_url = item.imagem_url || null;\nconst ogImagePatterns = [\n  /<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)[\"']/i,\n  /<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']og:image[\"']/i,\n  /<meta[^>]+name=[\"']twitter:image[\"'][^>]+content=[\"']([^\"']+)[\"']/i,\n  /<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+name=[\"']twitter:image[\"']/i,\n];\nfor (const pattern of ogImagePatterns) {\n  const m = html.match(pattern);\n  if (m && m[1] && m[1].startsWith('http')) {\n    imagem_url = m[1];\n    break;\n  }\n}\n\n// Extrai parágrafos a partir de um ponto de ancoragem no HTML\n// Resolve problema de regex com divs aninhados (parava no 1º </div>)\nfunction extractFromAnchor(htmlStr, anchorRegex) {\n  const m = htmlStr.match(anchorRegex);\n  if (!m) return null;\n  const start = htmlStr.indexOf(m[0]);\n  if (start === -1) return null;\n  const chunk = htmlStr.substring(start, start + 25000);\n  const paragraphs = (chunk.match(/<p[^>]*>[\\s\\S]*?<\\/p>/gi) || [])\n    .map(p => p.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim())\n    .filter(p => p.length > 40);\n  if (paragraphs.length === 0) return null;\n  return '<p>' + paragraphs.slice(0, 40).join('</p>\\n<p>') + '</p>';\n}\n\nconst anchors = [\n  /<article[^>]*>/i,\n  /<div[^>]+class=[\"'][^\"']*entry-content[^\"']*[\"']/i,\n  /<div[^>]+class=[\"'][^\"']*post-content[^\"']*[\"']/i,\n  /<div[^>]+class=[\"'][^\"']*td-post-content[^\"']*[\"']/i,\n  /<div[^>]+class=[\"'][^\"']*article-body[^\"']*[\"']/i,\n  /<div[^>]+class=[\"'][^\"']*materia-conteudo[^\"']*[\"']/i,\n  /<div[^>]+class=[\"'][^\"']*conteudo[^\"']*[\"']/i,\n  /<div[^>]+class=[\"'][^\"']*content[^\"']*[\"']/i,\n  /<main[^>]*>/i,\n];\n\nlet conteudo = null;\nfor (const anchor of anchors) {\n  const extracted = extractFromAnchor(html, anchor);\n  if (extracted && extracted.length > 200) {\n    conteudo = extracted;\n    break;\n  }\n}\n\n// Fallback: todos os parágrafos com texto significativo\nif (!conteudo) {\n  const allP = (html.match(/<p[^>]*>[\\s\\S]*?<\\/p>/gi) || [])\n    .map(p => p.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim())\n    .filter(p => p.length > 60);\n  if (allP.length >= 2) {\n    conteudo = '<p>' + allP.slice(0, 30).join('</p>\\n<p>') + '</p>';\n  }\n}\n\nconsole.log(`📰 ${item.titulo} — conteudo: ${conteudo ? conteudo.length + ' chars' : 'não extraído'} | imagem: ${imagem_url ? 'ok' : 'null'}`);\n\nreturn [{ json: { ...item, conteudo: conteudo || null, imagem_url } }];"
+      },
+      "id": "4bbf1bff-e80f-4710-ad35-840c288f2b4d",
+      "name": "📝 Extrair conteúdo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10256,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://portal-do-esporte-phi.vercel.app/api/webhook/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "portal-esporte-webhook-2026"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'noticia', titulo: $json.titulo, resumo: $json.resumo, conteudo: $json.conteudo, imagem_url: $json.imagem_url, fonte_nome: $json.fonte_nome, fonte_url: $json.fonte_url, esporte_slug: $json.esporte_slug }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "31b60638-9523-47ad-8497-394a973392a0",
+      "name": "📤 Enviar notícia ao Portal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10464,
+        1600
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\nconst titulo = $('🔄 Um item por vez').item.json.titulo;\n\nif (response.success) {\n  console.log(`✅ Salva: ${titulo}`);\n} else if (response.skipped) {\n  console.log(`⏭️ Duplicata: ${titulo}`);\n} else {\n  console.log(`❌ Erro: ${titulo} — ${JSON.stringify(response)}`);\n}\n\nreturn $input.all();"
+      },
+      "id": "18cad295-b488-4a22-89db-0f58d8299a13",
+      "name": "📝 Log do resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10688,
+        1424
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "⏰ Disparar a cada 6h": {
+      "main": [
+        [
+          {
+            "node": "📋 Lista de Fontes RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Lista de Fontes RSS": {
+      "main": [
+        [
+          {
+            "node": "🌐 Buscar RSS Feed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Buscar RSS Feed": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parsear XML do RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Parsear XML do RSS": {
+      "main": [
+        [
+          {
+            "node": "🔄 Um item por vez",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Um item por vez": {
+      "main": [
+        [
+          {
+            "node": "📝 Log do resultado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔗 Buscar artigo completo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Buscar artigo completo": {
+      "main": [
+        [
+          {
+            "node": "📝 Extrair conteúdo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Extrair conteúdo": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar notícia ao Portal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Enviar notícia ao Portal": {
+      "main": [
+        [
+          {
+            "node": "📝 Log do resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "fb68cf3c-5e03-44f9-bcec-4604b07659d0",
+  "meta": {
+    "instanceId": "f5912e8d2d1b719027aac7bc083d75ff0eefaf4cce894dfe7b1fb1dcb9fe84ea"
+  },
+  "id": "RX78LLQuFMqPgsrn",
+  "tags": []
+}
