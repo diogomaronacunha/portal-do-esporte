@@ -100,9 +100,9 @@ export default async function NoticiaPage({ params }: Props) {
           </div>
         )}
 
-        {/* Resumo */}
+        {/* Resumo — lead paragraph */}
         {noticia.resumo && (
-          <p className="text-lg text-gray-600 font-medium mb-6 leading-relaxed border-l-4 border-primary-400 pl-4">
+          <p className="text-lg text-gray-600 mb-8 leading-relaxed">
             {noticia.resumo}
           </p>
         )}
