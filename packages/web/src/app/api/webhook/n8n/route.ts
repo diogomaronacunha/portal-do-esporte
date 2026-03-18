@@ -101,7 +101,8 @@ async function handleNoticia(supabase: AnySupabaseClient, payload: NoticiaPayloa
     fonte_nome: payload.fonte_nome,
     fonte_url: payload.fonte_url,
     esporte_id: esporteId,
-    status: 'pendente',
+    status: 'publicado',
+    publicado_at: new Date().toISOString(),
   })
 
   if (error) {
