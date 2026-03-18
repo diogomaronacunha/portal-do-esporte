@@ -21,6 +21,14 @@
   }
 }
 
+/* Prose (artigos de notícias) — links na cor do portal */
+.prose a {
+  @apply text-primary-600 hover:text-primary-700 underline;
+}
+.prose strong {
+  @apply font-semibold text-gray-900;
+}
+
 @layer components {
   .btn-primary {
     @apply bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors;
