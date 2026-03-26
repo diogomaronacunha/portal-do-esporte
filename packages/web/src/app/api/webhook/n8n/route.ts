@@ -68,17 +68,6 @@ export async function POST(req: Request) {
 }
 
 async function handleNoticia(supabase: AnySupabaseClient, payload: NoticiaPayload) {
-  // Evitar duplicatas pela URL original
-  const { data: existing } = await supabase
-    .from('noticias')
-    .select('id')
-    .eq('fonte_url', payload.fonte_url)
-    .single()
-
-  if (existing) {
-    return NextResponse.json({ skipped: true, reason: 'duplicate' })
-  }
-
   // Buscar esporte_id se slug fornecido
   let esporteId: string | null = null
   if (payload.esporte_slug) {
@@ -92,21 +81,31 @@ async function handleNoticia(supabase: AnySupabaseClient, payload: NoticiaPayloa
 
   const slug = slugify(payload.titulo) + '-' + Date.now()
 
-  const { error } = await supabase.from('noticias').insert({
-    titulo: payload.titulo,
-    slug,
-    resumo: payload.resumo ?? null,
-    conteudo: payload.conteudo ?? null,
-    imagem_url: payload.imagem_url ?? null,
-    fonte_nome: payload.fonte_nome,
-    fonte_url: payload.fonte_url,
-    esporte_id: esporteId,
-    status: 'publicado',
-    publicado_at: new Date().toISOString(),
-  })
+  // Upsert com ON CONFLICT DO NOTHING — evita duplicatas mesmo em race conditions
+  // A UNIQUE constraint em fonte_url garante atomicidade no banco
+  const { error, data } = await supabase.from('noticias').upsert(
+    {
+      titulo: payload.titulo,
+      slug,
+      resumo: payload.resumo ?? null,
+      conteudo: payload.conteudo ?? null,
+      imagem_url: payload.imagem_url ?? null,
+      fonte_nome: payload.fonte_nome,
+      fonte_url: payload.fonte_url,
+      esporte_id: esporteId,
+      status: 'publicado',
+      publicado_at: new Date().toISOString(),
+    },
+    { onConflict: 'fonte_url', ignoreDuplicates: true }
+  ).select('id')
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // ignoreDuplicates: true retorna [] quando houve conflito (duplicata ignorada)
+  if (!data || data.length === 0) {
+    return NextResponse.json({ skipped: true, reason: 'duplicate' })
   }
 
   return NextResponse.json({ success: true, type: 'noticia' })
