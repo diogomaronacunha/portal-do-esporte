@@ -4,7 +4,8 @@ import { Suspense } from 'react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import FiltrosBusca from '@/components/FiltrosBusca'
-import { getEventosAprovados } from '@/lib/db/eventos'
+import Paginacao from '@/components/Paginacao'
+import { getEventosAprovados, countEventosAprovados } from '@/lib/db/eventos'
 import { getEsportesAtivos } from '@/lib/db/esportes'
 import { formatDate } from '@/lib/utils'
 
@@ -15,13 +16,18 @@ export const metadata: Metadata = {
   description: 'Calendário completo de eventos esportivos no Rio Grande do Sul.',
 }
 
-type Props = { searchParams: Promise<{ q?: string; esporte?: string }> }
+const POR_PAGINA = 20
+
+type Props = { searchParams: Promise<{ q?: string; esporte?: string; pagina?: string }> }
 
 export default async function EventosPage({ searchParams }: Props) {
-  const { q, esporte } = await searchParams
+  const { q, esporte, pagina: paginaStr } = await searchParams
+  const paginaAtual = Math.max(1, parseInt(paginaStr ?? '1', 10))
+  const offset = (paginaAtual - 1) * POR_PAGINA
 
-  const [eventos, esportes] = await Promise.all([
-    getEventosAprovados(50, { q, esporteSlug: esporte }).catch(() => []),
+  const [eventos, total, esportes] = await Promise.all([
+    getEventosAprovados(POR_PAGINA, { q, esporteSlug: esporte, offset }).catch(() => []),
+    countEventosAprovados({ q, esporteSlug: esporte }).catch(() => 0),
     getEsportesAtivos().catch(() => []),
   ])
 
@@ -42,6 +48,10 @@ export default async function EventosPage({ searchParams }: Props) {
         <Suspense>
           <FiltrosBusca esportes={esportes} placeholder="Buscar eventos..." />
         </Suspense>
+
+        {total > 0 && (
+          <p className="text-sm text-gray-400 mb-4">{total} evento{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}</p>
+        )}
 
         {eventos.length === 0 ? (
           <div className="text-center py-20 text-gray-400">
@@ -110,6 +120,10 @@ export default async function EventosPage({ searchParams }: Props) {
             ))}
           </div>
         )}
+
+        <Suspense>
+          <Paginacao total={total} porPagina={POR_PAGINA} paginaAtual={paginaAtual} />
+        </Suspense>
       </main>
       <Footer />
     </>

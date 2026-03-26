@@ -3,10 +3,11 @@ import type { Evento } from '@/types/database'
 
 export async function getEventosAprovados(
   limit = 20,
-  options: { q?: string; esporteSlug?: string } = {}
+  options: { q?: string; esporteSlug?: string; offset?: number } = {}
 ): Promise<Evento[]> {
   const supabase = await createClient()
   const hoje = new Date().toISOString().split('T')[0]
+  const offset = options.offset ?? 0
 
   let query = supabase
     .from('eventos')
@@ -14,7 +15,7 @@ export async function getEventosAprovados(
     .eq('status', 'aprovado')
     .gte('data_inicio', hoje)
     .order('data_inicio', { ascending: true })
-    .limit(limit)
+    .range(offset, offset + limit - 1)
 
   if (options.q) {
     query = query.ilike('titulo', `%${options.q}%`)
@@ -26,6 +27,30 @@ export async function getEventosAprovados(
   const { data, error } = await query
   if (error) throw new Error(`Erro ao buscar eventos: ${error.message}`)
   return data ?? []
+}
+
+export async function countEventosAprovados(
+  options: { q?: string; esporteSlug?: string } = {}
+): Promise<number> {
+  const supabase = await createClient()
+  const hoje = new Date().toISOString().split('T')[0]
+
+  let query = supabase
+    .from('eventos')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'aprovado')
+    .gte('data_inicio', hoje)
+
+  if (options.q) {
+    query = query.ilike('titulo', `%${options.q}%`)
+  }
+  if (options.esporteSlug) {
+    query = query.eq('esportes.slug', options.esporteSlug)
+  }
+
+  const { count, error } = await query
+  if (error) throw new Error(`Erro ao contar eventos: ${error.message}`)
+  return count ?? 0
 }
 
 export async function getEventoPorId(id: string): Promise<Evento | null> {
