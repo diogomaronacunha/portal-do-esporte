@@ -8,7 +8,7 @@ import FiltrosBusca from '@/components/FiltrosBusca'
 import Paginacao from '@/components/Paginacao'
 import { getNoticiasPublicadas, countNoticiasPublicadas } from '@/lib/db/noticias'
 import { getEsportesAtivos } from '@/lib/db/esportes'
-import { formatDate } from '@/lib/utils'
+import { formatDate, getEsporteIcone } from '@/lib/utils'
 
 export const revalidate = 1800
 
@@ -75,7 +75,7 @@ export default async function NoticiasPage({ searchParams }: Props) {
                     </div>
                   ) : (
                     <div className="h-44 bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-                      <span className="text-primary-600 text-4xl">⚽</span>
+                      <span className="text-5xl">{getEsporteIcone(noticia.esporte?.slug)}</span>
                     </div>
                   )}
                   <div className="p-4">
