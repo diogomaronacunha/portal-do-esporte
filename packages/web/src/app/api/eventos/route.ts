@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { slugify } from '@/lib/utils'
+import { notificarAdmin } from '@/lib/email'
 
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -49,6 +50,8 @@ export async function POST(req: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  void notificarAdmin('evento', titulo.trim())
 
   return NextResponse.json({ success: true, id: data.id }, { status: 201 })
 }
