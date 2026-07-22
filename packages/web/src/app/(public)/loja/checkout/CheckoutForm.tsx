@@ -38,11 +38,9 @@ export default function CheckoutForm({ userEmail }: CheckoutFormProps) {
 
     const payload = {
       endereco,
+      // Apenas id/quantidade/tamanho — preço e nome são resolvidos no servidor
       itens: items.map(i => ({
         produto_id: i.produto.id,
-        lojista_id: i.produto.lojista_id,
-        nome_produto: i.produto.nome,
-        preco_unitario: i.produto.preco,
         quantidade: i.quantidade,
         tamanho: i.tamanho,
       })),

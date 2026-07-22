@@ -6,6 +6,7 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import { getNoticiaPorSlug } from '@/lib/db/noticias'
 import { formatDate } from '@/lib/utils'
+import { sanitizeNoticiaHtml } from '@/lib/sanitize'
 
 export const revalidate = 3600
 
@@ -111,7 +112,7 @@ export default async function NoticiaPage({ params }: Props) {
         {noticia.conteudo ? (
           <div
             className="prose prose-gray max-w-none"
-            dangerouslySetInnerHTML={{ __html: noticia.conteudo }}
+            dangerouslySetInnerHTML={{ __html: sanitizeNoticiaHtml(noticia.conteudo) }}
           />
         ) : (
           <p className="text-gray-500">

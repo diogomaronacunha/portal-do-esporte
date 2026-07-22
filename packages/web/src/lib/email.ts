@@ -1,6 +1,5 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'diogomaronacunha@hotmail.com'
 const FROM = 'Portal do Esporte <notificacoes@portaldoesporte.com.br>'
 
@@ -17,9 +16,20 @@ const LABELS: Record<TipoSubmissao, { titulo: string; path: string }> = {
 export async function notificarAdmin(tipo: TipoSubmissao, nome: string) {
   if (!process.env.RESEND_API_KEY) return // silencioso se não configurado
 
+  // Instanciar aqui: o construtor lança erro sem API key, o que quebra o build
+  const resend = new Resend(process.env.RESEND_API_KEY)
+
   const { titulo, path } = LABELS[tipo]
   const url = `https://portaldoesporte.com.br${path}`
 
+  try {
+    await enviarEmail(resend, titulo, nome, url)
+  } catch (error) {
+    console.error('Erro ao notificar admin por email:', error)
+  }
+}
+
+async function enviarEmail(resend: Resend, titulo: string, nome: string, url: string) {
   await resend.emails.send({
     from: FROM,
     to: ADMIN_EMAIL,

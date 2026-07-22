@@ -127,7 +127,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "portal-esporte-webhook-2026"
+              "value": "SUBSTITUIR_PELO_N8N_WEBHOOK_SECRET"
             },
             {
               "name": "Content-Type",

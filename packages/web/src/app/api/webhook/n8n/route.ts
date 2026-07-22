@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { slugify } from '@/lib/utils'
+import { sanitizeNoticiaHtml } from '@/lib/sanitize'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnySupabaseClient = SupabaseClient<any, any, any>
@@ -88,7 +89,7 @@ async function handleNoticia(supabase: AnySupabaseClient, payload: NoticiaPayloa
       titulo: payload.titulo,
       slug,
       resumo: payload.resumo ?? null,
-      conteudo: payload.conteudo ?? null,
+      conteudo: payload.conteudo ? sanitizeNoticiaHtml(payload.conteudo) : null,
       imagem_url: payload.imagem_url ?? null,
       fonte_nome: payload.fonte_nome,
       fonte_url: payload.fonte_url,

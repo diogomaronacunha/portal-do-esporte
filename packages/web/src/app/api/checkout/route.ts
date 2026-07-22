@@ -6,9 +6,6 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://portal-do-esporte-
 
 interface ItemPayload {
   produto_id: string
-  lojista_id: string
-  nome_produto: string
-  preco_unitario: number
   quantidade: number
   tamanho: string | null
 }
@@ -21,14 +18,57 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   }
 
-  const body = await request.json()
+  const body = await request.json().catch(() => null)
+  if (!body) {
+    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
+  }
+
   const { endereco, itens } = body as { endereco: Record<string, string>; itens: ItemPayload[] }
 
   if (!itens?.length) {
     return NextResponse.json({ error: 'Carrinho vazio' }, { status: 400 })
   }
 
-  const total = itens.reduce((acc, i) => acc + i.preco_unitario * i.quantidade, 0)
+  for (const item of itens) {
+    if (!item.produto_id || !Number.isInteger(item.quantidade) || item.quantidade < 1 || item.quantidade > 99) {
+      return NextResponse.json({ error: 'Item inválido no carrinho' }, { status: 400 })
+    }
+  }
+
+  // Preço, nome e lojista SEMPRE do banco — nunca do cliente
+  const ids = [...new Set(itens.map(i => i.produto_id))]
+  const { data: produtos, error: produtosError } = await supabase
+    .from('produtos')
+    .select('id, nome, preco, lojista_id')
+    .in('id', ids)
+    .eq('status', 'ativo')
+
+  if (produtosError) {
+    return NextResponse.json({ error: produtosError.message }, { status: 500 })
+  }
+
+  const porId = new Map((produtos ?? []).map(p => [p.id, p]))
+  const indisponivel = itens.find(i => !porId.has(i.produto_id))
+  if (indisponivel) {
+    return NextResponse.json(
+      { error: 'Um dos produtos do carrinho não está mais disponível. Atualize o carrinho.' },
+      { status: 409 }
+    )
+  }
+
+  const itensValidados = itens.map(i => {
+    const produto = porId.get(i.produto_id)!
+    return {
+      produto_id: produto.id,
+      lojista_id: produto.lojista_id,
+      nome_produto: produto.nome,
+      preco_unitario: Number(produto.preco),
+      quantidade: i.quantidade,
+      tamanho: i.tamanho ?? null,
+    }
+  })
+
+  const total = itensValidados.reduce((acc, i) => acc + i.preco_unitario * i.quantidade, 0)
 
   // 1. Criar pedido no banco
   const { data: pedido, error: pedidoError } = await supabase
@@ -48,15 +88,7 @@ export async function POST(request: Request) {
 
   // 2. Inserir itens do pedido
   const { error: itensError } = await supabase.from('pedidos_itens').insert(
-    itens.map(i => ({
-      pedido_id: pedido.id,
-      produto_id: i.produto_id,
-      lojista_id: i.lojista_id,
-      nome_produto: i.nome_produto,
-      preco_unitario: i.preco_unitario,
-      quantidade: i.quantidade,
-      tamanho: i.tamanho,
-    }))
+    itensValidados.map(i => ({ pedido_id: pedido.id, ...i }))
   )
 
   if (itensError) {
@@ -78,7 +110,7 @@ export async function POST(request: Request) {
   const pref = await preference.create({
     body: {
       external_reference: pedido.id,
-      items: itens.map(i => ({
+      items: itensValidados.map(i => ({
         id: i.produto_id,
         title: i.nome_produto + (i.tamanho ? ` (${i.tamanho})` : ''),
         quantity: i.quantidade,
