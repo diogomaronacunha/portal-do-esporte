@@ -60,7 +60,7 @@ export default function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center">
           <Image
-            src="http://portaldoesporte.com.br/wp-content/uploads/2022/06/ID-Portal-do-Esporte-300x146.png"
+            src="/logo-portal-do-esporte.png"
             alt="Portal do Esporte"
             width={150}
             height={73}

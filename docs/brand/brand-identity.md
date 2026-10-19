@@ -6,10 +6,13 @@ PDF completo: `docs/brand/ID Portal do Esporte.pdf`
 
 ## Logo
 
-- **URL (WordPress atual):** `http://portaldoesporte.com.br/wp-content/uploads/2022/06/ID-Portal-do-Esporte-300x146.png`
+- **Arquivo:** `packages/web/public/logo-portal-do-esporte.png` (servido localmente)
 - **Dimensões originais:** 300 × 146 px
-- **Alt text:** "portal do esporte logo"
+- **Alt text:** "Portal do Esporte"
 - **Uso no Next.js:** `<Image>` com `width={150} height={73}` (50% scale)
+- **Origem:** recuperado do WordPress legado (`wp-content/uploads/2022/06/`), que saiu do ar
+  quando o domínio passou a apontar para a Vercel. Não referenciar mais URLs do WordPress.
+- **Favicon original preservado:** `packages/web/public/ico-portal.png` (16 × 16, ainda não instalado)
 
 ## Paleta de Cores
 
@@ -46,5 +49,6 @@ PDF completo: `docs/brand/ID Portal do Esporte.pdf`
 
 ## Site de Referência
 
-- **Site atual:** https://portaldoesporte.com.br/
-- **Novo portal:** https://portal-do-esporte-phi.vercel.app/
+- **Produção:** https://portaldoesporte.com.br/ — já serve o portal Next.js (Vercel)
+- **Preview Vercel:** https://portal-do-esporte-phi.vercel.app/
+- **WordPress legado:** fora do ar. Permanece apenas na Hostinger, sem domínio apontado.
