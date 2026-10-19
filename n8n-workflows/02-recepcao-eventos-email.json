@@ -4,7 +4,11 @@
     {
       "parameters": {
         "pollTimes": {
-          "item": [{ "mode": "everyMinute" }]
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
         },
         "mailbox": "INBOX",
         "options": {
@@ -17,7 +21,10 @@
       "name": "📬 Monitorar Email (IMAP)",
       "type": "n8n-nodes-base.emailReadImap",
       "typeVersion": 2,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "credentials": {
         "imap": {
           "id": "CONFIGURAR_CREDENCIAL_IMAP",
@@ -28,12 +35,17 @@
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": false },
+          "options": {
+            "caseSensitive": false
+          },
           "conditions": [
             {
               "leftValue": "={{ $json.subject }}",
               "rightValue": "evento",
-              "operator": { "type": "string", "operation": "contains" }
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
             }
           ]
         }
@@ -42,7 +54,10 @@
       "name": "🔎 Filtrar e-mails de evento",
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -52,12 +67,15 @@
       "name": "🔍 Extrair dados do evento",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://portal-do-esporte-phi.vercel.app/api/webhook/n8n",
+        "url": "https://www.portaldoesporte.com.br/api/webhook/n8n",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -74,13 +92,18 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"type\": \"evento\",\n  \"titulo\": \"{{ $json.titulo }}\",\n  \"descricao\": \"{{ $json.descricao }}\",\n  \"data_inicio\": \"{{ $json.data_inicio }}\",\n  \"local_nome\": \"{{ $json.local_nome }}\",\n  \"local_cidade\": \"{{ $json.local_cidade }}\",\n  \"organizador_nome\": \"{{ $json.organizador_nome }}\",\n  \"organizador_contato\": \"{{ $json.organizador_contato }}\",\n  \"esporte_slug\": \"{{ $json.esporte_slug }}\",\n  \"gratuito\": {{ $json.gratuito }},\n  \"url_inscricao\": \"{{ $json.url_inscricao }}\"\n}",
-        "options": { "timeout": 10000 }
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "node-webhook",
       "name": "📤 Enviar evento ao Portal",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 300],
+      "position": [
+        900,
+        300
+      ],
       "continueOnFail": true
     },
     {
@@ -91,25 +114,62 @@
       "name": "📝 Log do resultado",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 300]
+      "position": [
+        1120,
+        300
+      ]
     }
   ],
   "connections": {
     "📬 Monitorar Email (IMAP)": {
-      "main": [[{ "node": "🔎 Filtrar e-mails de evento", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "🔎 Filtrar e-mails de evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "🔎 Filtrar e-mails de evento": {
-      "main": [[{ "node": "🔍 Extrair dados do evento", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "🔍 Extrair dados do evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "🔍 Extrair dados do evento": {
-      "main": [[{ "node": "📤 Enviar evento ao Portal", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "📤 Enviar evento ao Portal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "📤 Enviar evento ao Portal": {
-      "main": [[{ "node": "📝 Log do resultado", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "📝 Log do resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "executionOrder": "v1"
   },
-  "tags": ["portal-do-esporte"]
+  "tags": [
+    "portal-do-esporte"
+  ]
 }
